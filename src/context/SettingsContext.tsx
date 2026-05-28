@@ -12,6 +12,7 @@ export interface SettingsContextType {
   aiModel: string;
   themeMode: string;
   themeColor: string;
+  customThemeColor: string;
   loading: boolean;
   updateAppSetting: (key: string, value: string) => Promise<void>;
   refreshSettings: () => Promise<void>;
@@ -30,6 +31,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [aiModel, setAiModel] = useState<string>('gpt-4o-mini');
   const [themeMode, setThemeMode] = useState<string>('system');
   const [themeColor, setThemeColor] = useState<string>('green');
+  const [customThemeColor, setCustomThemeColor] = useState<string>('#6366F1');
   const [loading, setLoading] = useState<boolean>(true);
 
   const refreshSettings = async () => {
@@ -62,6 +64,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
       if (data.theme_color) {
         setThemeColor(data.theme_color);
+      }
+      if (data.custom_theme_color) {
+        setCustomThemeColor(data.custom_theme_color);
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -96,6 +101,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setThemeMode(value);
       } else if (key === 'theme_color') {
         setThemeColor(value);
+      } else if (key === 'custom_theme_color') {
+        setCustomThemeColor(value);
       }
     } catch (error) {
       console.error(`Failed to update setting ${key}:`, error);
@@ -114,6 +121,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         aiModel,
         themeMode,
         themeColor,
+        customThemeColor,
         loading,
         updateAppSetting,
         refreshSettings,

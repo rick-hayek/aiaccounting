@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getCategories, addTransaction, updateTransaction, Category, Transaction } from '@/database/db';
 import { Spacing } from '@/constants/theme';
 import { useThemeColors } from '@/hooks/useThemeColors';
+import { useSettings } from '@/context/SettingsContext';
 import { getCurrencySymbol } from '@/utils/currency';
 
 interface ManualAddModalProps {
@@ -44,6 +45,9 @@ export const ManualAddModal: React.FC<ManualAddModalProps> = ({
     backgroundElement: themeColors.surfaceElevated,
     backgroundSelected: themeColors.primarySurface,
   };
+  const { themeMode } = useSettings();
+  const systemColorScheme = useColorScheme();
+  const isDark = themeMode === 'system' ? systemColorScheme === 'dark' : themeMode === 'dark';
 
   // Forms state
   const [type, setType] = useState<'expense' | 'income'>('expense');
@@ -269,20 +273,37 @@ export const ManualAddModal: React.FC<ManualAddModalProps> = ({
                   {group.children.map(cat => {
                     const isSelected = selectedCategoryIds.includes(cat.id);
                     const labelName = cat.is_custom === 1 ? cat.name_key : t(cat.name_key);
+                    
+                    const chipColor = cat.color || '#9E9E9E';
+                    let chipBg = 'transparent';
+                    let chipBorder = chipColor;
+                    
+                    if (isSelected) {
+                      chipBg = chipColor;
+                      chipBorder = chipColor;
+                    } else {
+                      if (!isDark) {
+                        chipBg = chipColor + '12'; // Light mode pastel background
+                        chipBorder = chipColor;
+                      } else {
+                        chipBg = 'transparent';
+                        chipBorder = chipColor;
+                      }
+                    }
+
                     return (
                       <TouchableOpacity
                         key={cat.id}
                         style={[
                           styles.chip,
-                          { borderColor: cat.color || '#9E9E9E' },
-                          isSelected && { backgroundColor: cat.color || '#9E9E9E' }
+                          { borderColor: chipBorder, backgroundColor: chipBg }
                         ]}
                         onPress={() => handleToggleCategory(cat.id)}
                       >
                         <Ionicons
                           name={(cat.icon || 'list') as any}
                           size={14}
-                          color={isSelected ? '#FFF' : (cat.color || '#9E9E9E')}
+                          color={isSelected ? '#FFF' : chipColor}
                           style={{ marginRight: 4 }}
                         />
                         <Text
@@ -447,7 +468,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.three,
     borderRadius: 20,
-    borderWidth: 1.5,
+    borderWidth: 0.8,
   },
   chipText: {
     fontSize: 12,

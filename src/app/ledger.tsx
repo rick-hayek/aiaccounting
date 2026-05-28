@@ -39,7 +39,11 @@ interface TransactionRowItem {
 
 type ListItem = HeaderItem | TransactionRowItem;
 
-export default function LedgerScreen() {
+interface LedgerScreenProps {
+  isActive?: boolean;
+}
+
+export default function LedgerScreen({ isActive }: LedgerScreenProps) {
   const { t } = useTranslation();
   const colors = useThemeColors();
   const db = useSQLiteContext();
@@ -69,12 +73,20 @@ export default function LedgerScreen() {
     }
   }, [db]);
 
-  // Load on mount and on page focus
+  // Load on mount and on page focus or is active
   useFocusEffect(
     useCallback(() => {
-      loadData();
-    }, [loadData])
+      if (isActive !== false) {
+        loadData();
+      }
+    }, [loadData, isActive])
   );
+
+  useEffect(() => {
+    if (isActive) {
+      loadData();
+    }
+  }, [isActive, loadData]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -301,7 +313,8 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
+    paddingTop: Spacing.three,
+    paddingBottom: Spacing.two,
   },
   headerTitle: {
     fontSize: 24,

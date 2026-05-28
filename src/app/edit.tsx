@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  useColorScheme,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -27,8 +28,10 @@ export default function EditTransactionScreen() {
   const { t } = useTranslation();
   const db = useSQLiteContext();
   const colors = useThemeColors();
-  const { defaultCurrency } = useSettings();
+  const { defaultCurrency, themeMode } = useSettings();
   const currencySymbol = getCurrencySymbol(defaultCurrency || 'CNY');
+  const systemColorScheme = useColorScheme();
+  const isDark = themeMode === 'system' ? systemColorScheme === 'dark' : themeMode === 'dark';
 
   const { id } = useLocalSearchParams<{ id: string }>();
   const transactionId = id ? parseInt(id, 10) : null;
@@ -277,20 +280,37 @@ export default function EditTransactionScreen() {
                 {group.children.map(cat => {
                   const isSelected = selectedCategoryIds.includes(cat.id);
                   const labelName = cat.is_custom === 1 ? cat.name_key : t(cat.name_key);
+                  
+                  const chipColor = cat.color || '#9E9E9E';
+                  let chipBg = 'transparent';
+                  let chipBorder = chipColor;
+                  
+                  if (isSelected) {
+                    chipBg = chipColor;
+                    chipBorder = chipColor;
+                  } else {
+                    if (!isDark) {
+                      chipBg = chipColor + '12'; // Light mode pastel background
+                      chipBorder = chipColor;
+                    } else {
+                      chipBg = 'transparent';
+                      chipBorder = chipColor;
+                    }
+                  }
+
                   return (
                     <TouchableOpacity
                       key={cat.id}
                       style={[
                         styles.chip,
-                        { borderColor: cat.color || '#9E9E9E' },
-                        isSelected && { backgroundColor: cat.color || '#9E9E9E' }
+                        { borderColor: chipBorder, backgroundColor: chipBg }
                       ]}
                       onPress={() => handleToggleCategory(cat.id)}
                     >
                       <Ionicons
                         name={(cat.icon || 'list') as any}
                         size={14}
-                        color={isSelected ? '#FFF' : (cat.color || '#9E9E9E')}
+                        color={isSelected ? '#FFF' : chipColor}
                         style={{ marginRight: 4 }}
                       />
                       <Text
@@ -468,7 +488,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.three,
     borderRadius: 20,
-    borderWidth: 1.5,
+    borderWidth: 0.8,
   },
   chipText: {
     fontSize: 12,

@@ -24,7 +24,11 @@ import { getCurrencySymbol } from '@/utils/currency';
 
 type PeriodType = 'week' | 'month' | 'year' | 'custom';
 
-export default function StatsScreen() {
+interface StatsScreenProps {
+  isActive?: boolean;
+}
+
+export default function StatsScreen({ isActive }: StatsScreenProps) {
   const { t, i18n } = useTranslation();
   const colors = useThemeColors();
   const db = useSQLiteContext();
@@ -224,12 +228,20 @@ export default function StatsScreen() {
     }
   }, [db, period, customStartDate, customEndDate, i18n.language]);
 
-  // Reload data when page gains focus
+  // Reload data when page gains focus or is active
   useFocusEffect(
     useCallback(() => {
-      loadData();
-    }, [loadData])
+      if (isActive !== false) {
+        loadData();
+      }
+    }, [loadData, isActive])
   );
+
+  useEffect(() => {
+    if (isActive) {
+      loadData();
+    }
+  }, [isActive, loadData]);
 
   // Trigger reloading for custom dates changes
   useEffect(() => {
@@ -447,18 +459,7 @@ export default function StatsScreen() {
             )}
           </View>
 
-          {/* SVG Trend Area Chart */}
-          {totalExpense > 0 && (
-            <View style={[styles.chartContainer, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
-              <Text style={[styles.sectionTitle, { color: colors.text, alignSelf: 'flex-start', marginBottom: Spacing.two }]}>
-                {t('stats.trend_title')}
-              </Text>
-              <TrendChart
-                data={trendPoints}
-                currencySymbol={currencySymbol}
-              />
-            </View>
-          )}
+
 
           {/* Donut Chart (Category Breakdown Ratio) */}
           <View style={[styles.chartContainer, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
@@ -580,6 +581,19 @@ export default function StatsScreen() {
               </View>
             </View>
           )}
+
+          {/* SVG Trend Area Chart */}
+          {totalExpense > 0 && (
+            <View style={[styles.chartContainer, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
+              <Text style={[styles.sectionTitle, { color: colors.text, alignSelf: 'flex-start', marginBottom: Spacing.two }]}>
+                {t('stats.trend_title')}
+              </Text>
+              <TrendChart
+                data={trendPoints}
+                currencySymbol={currencySymbol}
+              />
+            </View>
+          )}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -592,7 +606,8 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
+    paddingTop: Spacing.three,
+    paddingBottom: Spacing.two,
   },
   headerTitle: {
     fontSize: 24,

@@ -18,13 +18,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, router } from 'expo-router';
 
 import { useSettings } from '@/context/SettingsContext';
 import { getCategories, addCategory, deleteCategory, Category } from '@/database/db';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { SettingsRow } from '@/components/SettingsRow';
 import { BorderRadius, Spacing } from '@/constants/theme';
+
+const EXCHANGE_RATES: Record<string, Record<string, number>> = {
+  CNY: { CNY: 1.0, USD: 0.14, EUR: 0.13, GBP: 0.11 },
+  USD: { CNY: 7.15, USD: 1.0, EUR: 0.92, GBP: 0.79 },
+  EUR: { CNY: 7.75, USD: 1.09, EUR: 1.0, GBP: 0.86 },
+  GBP: { CNY: 9.05, USD: 1.27, EUR: 1.16, GBP: 1.0 }
+};
 
 const PRESET_COLORS = [
   '#FF5722', '#E91E63', '#9C27B0', '#3F51B5',
@@ -40,7 +47,11 @@ const PRESET_ICONS = [
   'home-outline', 'shield-checkmark-outline', 'medical-outline', 'construct-outline'
 ];
 
-export default function SettingsScreen() {
+interface SettingsScreenProps {
+  isActive?: boolean;
+}
+
+export default function SettingsScreen({ isActive }: SettingsScreenProps) {
   const { t } = useTranslation();
   const db = useSQLiteContext();
   const colors = useThemeColors();
@@ -54,6 +65,7 @@ export default function SettingsScreen() {
     aiModel,
     themeMode,
     themeColor,
+    customThemeColor,
     loading: settingsLoading,
     updateAppSetting
   } = useSettings();
@@ -96,9 +108,17 @@ export default function SettingsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadCategories();
-    }, [loadCategories])
+      if (isActive !== false) {
+        loadCategories();
+      }
+    }, [loadCategories, isActive])
   );
+
+  useEffect(() => {
+    if (isActive) {
+      loadCategories();
+    }
+  }, [isActive, loadCategories]);
 
   // Sync AI states when opening modal
   const openAiModal = () => {
@@ -163,10 +183,17 @@ export default function SettingsScreen() {
   // Cycle Currencies: CNY -> USD -> EUR -> GBP -> CNY
   const cycleCurrency = async () => {
     const currencies = ['CNY', 'USD', 'EUR', 'GBP'];
-    const currentIndex = currencies.indexOf(defaultCurrency || 'CNY');
+    const prevCurr = defaultCurrency || 'CNY';
+    const currentIndex = currencies.indexOf(prevCurr);
     const nextIndex = (currentIndex + 1) % currencies.length;
     const nextCurr = currencies[nextIndex];
-    await updateAppSetting('default_currency', nextCurr);
+
+    try {
+      await updateAppSetting('default_currency', nextCurr);
+    } catch (e) {
+      console.error('Failed to update currency setting', e);
+      Alert.alert(t('common.error'), 'Failed to update currency setting');
+    }
   };
 
   // Toggle language zh/en
@@ -200,7 +227,7 @@ export default function SettingsScreen() {
   };
 
   const handleExportData = () => {
-    Alert.alert(t('common.coming_soon'), 'Export feature will be available soon!');
+    router.push('/export' as any);
   };
 
   // Mask API key: sk-...xxxx
@@ -223,8 +250,10 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: colors.text }]}>{t('settings.title')}</Text>
+      </View>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
         {/* Section 1: Account & Preferences */}
         <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>
@@ -472,12 +501,13 @@ export default function SettingsScreen() {
 
             <View style={{ paddingVertical: Spacing.two }}>
                {[
-                { key: 'green', label: t('settings.sage_green'), color: '#527954' },
+                { key: 'green', label: t('settings.sage_green'), color: '#66AA22' },
                 { key: 'blue', label: t('settings.slate_blue'), color: '#4A6D8C' },
                 { key: 'gold', label: t('settings.sand_gold'), color: '#8C7355' },
                 { key: 'black', label: t('settings.charcoal_black'), color: '#1A1A1A' },
                 { key: 'red', label: t('settings.berry_red'), color: '#B34766' },
                 { key: 'purple', label: t('settings.aurora_purple'), color: '#6366F1' },
+                { key: 'custom', label: t('settings.custom_theme') || '自定义色', color: customThemeColor },
               ].map((themeOpt) => {
                 const isSelected = themeColor === themeOpt.key;
                 return (
@@ -489,7 +519,9 @@ export default function SettingsScreen() {
                     ]}
                     onPress={async () => {
                       await updateAppSetting('theme_color', themeOpt.key);
-                      setThemeColorModalVisible(false);
+                      if (themeOpt.key !== 'custom') {
+                        setThemeColorModalVisible(false);
+                      }
                     }}
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -514,6 +546,45 @@ export default function SettingsScreen() {
                   </TouchableOpacity>
                 );
               })}
+
+              {/* Custom Color Input Editor */}
+              {themeColor === 'custom' && (
+                <View style={styles.customColorInputContainer}>
+                  <Text style={[styles.customColorInputLabel, { color: colors.textSecondary }]}>
+                    {t('settings.custom_color_hex') || '自定义色值 (HEX)'}
+                  </Text>
+                  <View style={styles.customColorInputRow}>
+                    <View style={[styles.customColorPreview, { backgroundColor: customThemeColor }]} />
+                    <TextInput
+                      value={customThemeColor}
+                      onChangeText={async (val) => {
+                        if (val.startsWith('#') && val.length <= 7) {
+                          await updateAppSetting('custom_theme_color', val);
+                        } else if (!val.startsWith('#') && val.length <= 6) {
+                          await updateAppSetting('custom_theme_color', '#' + val);
+                        }
+                      }}
+                      placeholder="#6366F1"
+                      placeholderTextColor={colors.textSecondary}
+                      style={[styles.customColorInput, { color: colors.text, borderColor: colors.divider }]}
+                      maxLength={7}
+                      autoCapitalize="characters"
+                    />
+                  </View>
+
+                  <View style={styles.swatchesRow}>
+                    {['#FF5722', '#E91E63', '#9C27B0', '#3F51B5', '#03A9F4', '#009688', '#FFC107', '#E040FB'].map((swatch) => (
+                      <TouchableOpacity
+                        key={swatch}
+                        style={[styles.swatchCircle, { backgroundColor: swatch }]}
+                        onPress={async () => {
+                          await updateAppSetting('custom_theme_color', swatch);
+                        }}
+                      />
+                    ))}
+                  </View>
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -684,10 +755,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  header: {
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.three,
+    paddingBottom: Spacing.two,
+  },
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
-    marginVertical: Spacing.two,
   },
   sectionHeader: {
     fontSize: 13,
@@ -873,5 +948,55 @@ const styles = StyleSheet.create({
   },
   themeOptionLabel: {
     fontSize: 16,
+  },
+  customColorInputContainer: {
+    marginTop: Spacing.three,
+    paddingTop: Spacing.two,
+    borderTopWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+  customColorInputLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: Spacing.one,
+  },
+  customColorInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  customColorPreview: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+  },
+  customColorInput: {
+    flex: 1,
+    height: 40,
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.three,
+    fontSize: 15,
+  },
+  swatchesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+    marginTop: Spacing.two,
+    marginBottom: Spacing.one,
+  },
+  swatchCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
   },
 });
