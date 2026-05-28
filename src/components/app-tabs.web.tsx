@@ -30,7 +30,7 @@ export default function AppTabs() {
             <TabButton>{t('stats.title')}</TabButton>
           </TabTrigger>
           <TabTrigger name="ai" href={"/ai" as any} asChild>
-            <TabButton isFab={true}>{t('ai.title')}</TabButton>
+            <TabButton isFab={true}>+</TabButton>
           </TabTrigger>
           <TabTrigger name="ledger" href={"/ledger" as any} asChild>
             <TabButton>{t('ledger.title')}</TabButton>
@@ -60,7 +60,7 @@ export function TabButton({ children, isFocused, isFab, ...props }: CustomTabTri
             { backgroundColor: isFocused ? colors.primaryLight : colors.primary },
           ]}
         >
-          <ThemedText style={{ color: colors.textOnPrimary, fontSize: 13, fontWeight: '700' }}>
+          <ThemedText style={{ color: colors.textOnPrimary, fontSize: 20, fontWeight: '700', marginTop: -2 }}>
             {children}
           </ThemedText>
         </View>
@@ -140,8 +140,8 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.one,
   },
   fabButton: {
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.four,
+    width: 40,
+    height: 40,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',

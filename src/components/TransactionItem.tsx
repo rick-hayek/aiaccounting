@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { BorderRadius, Shadows, Spacing } from '@/constants/theme';
+import { BorderRadius, Spacing } from '@/constants/theme';
 import type { Transaction, Category } from '@/database/db';
 
 interface TransactionItemProps {
@@ -28,7 +28,7 @@ export function TransactionItem({ transaction, currencySymbol, onPress, onLongPr
   const title = tx.note || tx.categories?.map(translateName).join(', ') || t('add_tx.title_add');
   const isExpense = tx.type === 'expense';
   const amountColor = isExpense ? colors.expense : colors.income;
-  const amountPrefix = isExpense ? '- ' : '+ ';
+  const amountPrefix = isExpense ? '-' : '+';
 
   // Format time from date
   const formatTime = (dateStr: string) => {
@@ -41,14 +41,20 @@ export function TransactionItem({ transaction, currencySymbol, onPress, onLongPr
 
   return (
     <TouchableOpacity
-      style={[styles.container, { backgroundColor: colors.surface }, Shadows.card]}
+      style={[
+        styles.container,
+        {
+          borderColor: colors.divider,
+          backgroundColor: colors.surface,
+        }
+      ]}
       onPress={() => onPress(tx)}
       onLongPress={() => onLongPress?.(tx)}
-      activeOpacity={0.7}
+      activeOpacity={0.6}
     >
       {/* Category Icon */}
       <View style={[styles.iconCircle, { backgroundColor: iconColor + '18' }]}>
-        <Ionicons name={iconName} size={22} color={iconColor} />
+        <Ionicons name={iconName} size={20} color={iconColor} />
       </View>
 
       {/* Title + Category Tags */}
@@ -58,13 +64,16 @@ export function TransactionItem({ transaction, currencySymbol, onPress, onLongPr
         </Text>
         {tx.categories && tx.categories.length > 0 && (
           <View style={styles.tagsRow}>
-            {tx.categories.slice(0, 3).map(c => (
-              <View key={c.id} style={[styles.tag, { backgroundColor: colors.primarySurface }]}>
-                <Text style={[styles.tagText, { color: colors.primary }]}>
-                  {translateName(c)}
-                </Text>
-              </View>
-            ))}
+            {tx.categories.slice(0, 3).map(c => {
+              const catColor = c.color || colors.primary;
+              return (
+                <View key={c.id} style={[styles.tag, { backgroundColor: catColor + '18' }]}>
+                  <Text style={[styles.tagText, { color: catColor }]}>
+                    {translateName(c)}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
         )}
       </View>
@@ -87,17 +96,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
-    paddingHorizontal: Spacing.three,
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.two,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 10,
   },
   iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: BorderRadius.md,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: Spacing.three,
+    marginRight: 12,
   },
   center: {
     flex: 1,
@@ -105,7 +115,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '500',
     marginBottom: 3,
   },
   tagsRow: {
@@ -114,20 +124,21 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   tag: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: BorderRadius.sm,
+    borderRadius: 4,
   },
   tagText: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: 10,
+    fontWeight: '600',
+    textTransform: 'uppercase',
   },
   right: {
     alignItems: 'flex-end',
   },
   amount: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '600',
     marginBottom: 2,
   },
   time: {

@@ -1,10 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { BorderRadius, Shadows, Spacing } from '@/constants/theme';
+import { BorderRadius, Spacing } from '@/constants/theme';
 
 interface MonthlySummaryCardProps {
   income: number;
@@ -22,115 +21,79 @@ export function MonthlySummaryCard({ income, expense, currencySymbol }: MonthlyS
   };
 
   return (
-    <View style={styles.shadowContainer}>
-      <LinearGradient
-        colors={[colors.primaryGradientStart, colors.primaryGradientEnd]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.card, Shadows.elevated]}
-      >
-        <Text style={styles.title}>{t('home.total_expense')}</Text>
+    <View style={styles.container}>
+      <View style={[styles.card, { backgroundColor: colors.primary }]}>
+        <Text style={styles.label}>{t('home.total_balance')}</Text>
         <Text style={styles.amount}>
           {currencySymbol}
-          {formatAmount(expense)}
+          {formatAmount(income - expense >= 0 ? income - expense : expense - income)}
         </Text>
 
-        <View style={styles.divider} />
-
         <View style={styles.statsRow}>
-          {/* Income Box */}
-          <View style={styles.statBox}>
-            <Text style={styles.statLabel}>{t('home.total_income')}</Text>
-            <Text style={styles.statVal} numberOfLines={1}>
-              +{currencySymbol}
-              {formatAmount(income)}
-            </Text>
-          </View>
-
-          <View style={styles.verticalDivider} />
-
-          {/* Expense Box */}
           <View style={styles.statBox}>
             <Text style={styles.statLabel}>{t('home.expense_label')}</Text>
             <Text style={styles.statVal} numberOfLines={1}>
-              -{currencySymbol}
+              {currencySymbol}
               {formatAmount(expense)}
             </Text>
           </View>
 
-          <View style={styles.verticalDivider} />
-
-          {/* Balance Box */}
           <View style={styles.statBox}>
-            <Text style={styles.statLabel}>{t('home.balance')}</Text>
-            <Text
-              style={[
-                styles.statVal,
-                { color: balance >= 0 ? '#FFFFFF' : '#FFCDD2' }
-              ]}
-              numberOfLines={1}
-            >
-              {balance >= 0 ? '+' : '-'}
+            <Text style={styles.statLabel}>{t('home.total_income')}</Text>
+            <Text style={styles.statVal} numberOfLines={1}>
               {currencySymbol}
-              {formatAmount(Math.abs(balance))}
+              {formatAmount(income)}
             </Text>
           </View>
         </View>
-      </LinearGradient>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  shadowContainer: {
+  container: {
     paddingHorizontal: Spacing.four,
     marginTop: Spacing.three,
   },
   card: {
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.four,
+    borderRadius: BorderRadius.lg,
+    padding: 20,
   },
-  title: {
-    color: 'rgba(255, 255, 255, 0.8)',
+  label: {
+    color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
+    letterSpacing: 0.3,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   amount: {
     color: '#FFFFFF',
     fontSize: 32,
-    fontWeight: '800',
-    marginTop: Spacing.one,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    marginVertical: Spacing.three,
+    fontWeight: '700',
+    marginTop: 4,
+    marginBottom: 20,
   },
   statsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 12,
   },
   statBox: {
     flex: 1,
-    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: BorderRadius.md,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
   },
   statLabel: {
-    color: 'rgba(255, 255, 255, 0.75)',
+    color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 11,
     fontWeight: '500',
-    marginBottom: Spacing.one,
+    marginBottom: 4,
   },
   statVal: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  verticalDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -13,14 +13,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { useSettings } from '@/context/SettingsContext';
 import { getTransactions, deleteTransaction, Transaction, Category } from '@/database/db';
 import { TransactionItem } from '@/components/TransactionItem';
 import { ManualAddModal } from '@/components/ManualAddModal';
-import { BorderRadius, Shadows, Spacing } from '@/constants/theme';
+import { BorderRadius, Spacing } from '@/constants/theme';
 import { getCurrencySymbol } from '@/utils/currency';
 
 type FilterType = 'all' | 'expense' | 'income';
@@ -147,35 +147,7 @@ export default function LedgerScreen() {
   }, [filteredTransactions]);
 
   const handleTransactionAction = (tx: Transaction) => {
-    Alert.alert(
-      t('common.confirm'),
-      `${tx.note || t('add_tx.title_add')} - ${currencySymbol}${tx.amount.toFixed(2)}`,
-      [
-        {
-          text: t('common.cancel'),
-          style: 'cancel',
-        },
-        {
-          text: t('common.edit'),
-          onPress: () => {
-            setEditTxId(tx.id);
-            setManualModalVisible(true);
-          },
-        },
-        {
-          text: t('common.delete'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteTransaction(db, tx.id);
-              loadData();
-            } catch (e) {
-              Alert.alert(t('common.error'), 'Failed to delete transaction');
-            }
-          },
-        },
-      ]
-    );
+    router.navigate({ pathname: '/edit', params: { id: tx.id.toString() } } as any);
   };
 
   const formatDateHeader = (dateStr: string) => {
@@ -333,7 +305,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   searchBarContainer: {
     paddingHorizontal: Spacing.four,

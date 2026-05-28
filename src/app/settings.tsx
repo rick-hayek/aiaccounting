@@ -11,6 +11,8 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Switch,
+  useColorScheme,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -22,7 +24,7 @@ import { useSettings } from '@/context/SettingsContext';
 import { getCategories, addCategory, deleteCategory, Category } from '@/database/db';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { SettingsRow } from '@/components/SettingsRow';
-import { BorderRadius, Shadows, Spacing } from '@/constants/theme';
+import { BorderRadius, Spacing } from '@/constants/theme';
 
 const PRESET_COLORS = [
   '#FF5722', '#E91E63', '#9C27B0', '#3F51B5',
@@ -50,9 +52,14 @@ export default function SettingsScreen() {
     aiApiKey,
     aiApiUrl,
     aiModel,
+    themeMode,
+    themeColor,
     loading: settingsLoading,
     updateAppSetting
   } = useSettings();
+
+  const colorScheme = useColorScheme();
+  const isDark = themeMode === 'system' ? colorScheme === 'dark' : themeMode === 'dark';
 
   // Custom Categories list
   const [categories, setCategories] = useState<Category[]>([]);
@@ -61,6 +68,7 @@ export default function SettingsScreen() {
   // Modals visibility
   const [aiModalVisible, setAiModalVisible] = useState<boolean>(false);
   const [catModalVisible, setCatModalVisible] = useState<boolean>(false);
+  const [themeColorModalVisible, setThemeColorModalVisible] = useState<boolean>(false);
 
   // Custom Category Form state
   const [newCatName, setNewCatName] = useState<string>('');
@@ -222,43 +230,73 @@ export default function SettingsScreen() {
         <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>
           {t('settings.section_account')}
         </Text>
-        <View style={[styles.sectionCard, { backgroundColor: colors.surface }, Shadows.card]}>
+        <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
           <SettingsRow
-            iconName="cash-outline"
-            iconBgColor="#4CAF50"
-            label={t('settings.currency')}
-            value={defaultCurrency || 'CNY'}
-            onPress={cycleCurrency}
-            showDivider={true}
-          />
-          <SettingsRow
-            iconName="language-outline"
-            iconBgColor="#2196F3"
+            iconName="globe-outline"
             label={t('settings.language')}
             value={language === 'zh' ? '中文' : 'English'}
             onPress={toggleLanguage}
+            showDivider={true}
+          />
+          <SettingsRow
+            iconName="wallet-outline"
+            label={t('settings.currency')}
+            value={defaultCurrency || 'CNY'}
+            onPress={cycleCurrency}
             showDivider={false}
           />
         </View>
 
-        {/* Section 2: AI Configuration */}
+        {/* Section 2: Appearance */}
         <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>
-          {t('settings.section_ai')}
+          {t('settings.section_appearance')}
         </Text>
-        <View style={[styles.sectionCard, { backgroundColor: colors.surface }, Shadows.card]}>
+        <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
           <SettingsRow
-            iconName="hardware-chip-outline"
-            iconBgColor="#9C27B0"
-            label={t('settings.ai_model')}
-            value={aiModel || 'gpt-4o-mini'}
-            onPress={openAiModal}
+            iconName="moon-outline"
+            label={t('settings.dark_mode')}
+            showChevron={false}
+            rightElement={
+              <Switch
+                value={isDark}
+                onValueChange={(val) => updateAppSetting('theme_mode', val ? 'dark' : 'light')}
+                trackColor={{ true: colors.primary, false: colors.divider }}
+                thumbColor={Platform.OS === 'android' ? (isDark ? colors.primary : '#f4f3f4') : undefined}
+              />
+            }
             showDivider={true}
           />
           <SettingsRow
-            iconName="key-outline"
-            iconBgColor="#FF9800"
-            label={t('settings.ai_key')}
-            value={maskKey(aiApiKey)}
+            iconName="color-palette-outline"
+            label={t('settings.theme_color')}
+            onPress={() => setThemeColorModalVisible(true)}
+            showChevron={true}
+            showDivider={false}
+            rightElement={
+              <View
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 9,
+                  backgroundColor: colors.primary,
+                  marginRight: 6,
+                  borderWidth: 1.5,
+                  borderColor: colors.divider,
+                }}
+              />
+            }
+          />
+        </View>
+
+        {/* Section 3: AI Configuration */}
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>
+          {t('settings.section_ai')}
+        </Text>
+        <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
+          <SettingsRow
+            iconName="cube-outline"
+            label={t('settings.ai_provider')}
+            value={aiProvider || 'openai'}
             onPress={openAiModal}
             showDivider={false}
           />
@@ -268,21 +306,13 @@ export default function SettingsScreen() {
         <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>
           {t('settings.section_data')}
         </Text>
-        <View style={[styles.sectionCard, { backgroundColor: colors.surface }, Shadows.card]}>
+        <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
           <SettingsRow
             iconName="download-outline"
-            iconBgColor="#00BCD4"
             label={t('settings.export_data')}
+            value="CSV / JSON"
             onPress={handleExportData}
-            showDivider={true}
-          />
-          <SettingsRow
-            iconName="trash-outline"
-            iconBgColor="#DC3545"
-            label={t('settings.clear_data')}
-            onPress={handleClearData}
             showDivider={false}
-            showChevron={false}
           />
         </View>
 
@@ -296,7 +326,7 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={[styles.sectionCard, { backgroundColor: colors.surface }, Shadows.card]}>
+        <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
           {categoriesLoading ? (
             <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: Spacing.four }} />
           ) : categories.filter(c => c.is_custom === 1).length === 0 ? (
@@ -426,6 +456,66 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </ScrollView>
           </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
+      {/* --- Theme Color Bottom Sheet Modal --- */}
+      <Modal animationType="slide" transparent={true} visible={themeColorModalVisible} onRequestClose={() => setThemeColorModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>{t('settings.theme_color')}</Text>
+              <TouchableOpacity onPress={() => setThemeColorModalVisible(false)}>
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ paddingVertical: Spacing.two }}>
+               {[
+                { key: 'green', label: t('settings.sage_green'), color: '#527954' },
+                { key: 'blue', label: t('settings.slate_blue'), color: '#4A6D8C' },
+                { key: 'gold', label: t('settings.sand_gold'), color: '#8C7355' },
+                { key: 'black', label: t('settings.charcoal_black'), color: '#1A1A1A' },
+                { key: 'red', label: t('settings.berry_red'), color: '#B34766' },
+                { key: 'purple', label: t('settings.aurora_purple'), color: '#6366F1' },
+              ].map((themeOpt) => {
+                const isSelected = themeColor === themeOpt.key;
+                return (
+                  <TouchableOpacity
+                    key={themeOpt.key}
+                    style={[
+                      styles.themeOptionRow,
+                      { borderColor: colors.divider }
+                    ]}
+                    onPress={async () => {
+                      await updateAppSetting('theme_color', themeOpt.key);
+                      setThemeColorModalVisible(false);
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 12,
+                          backgroundColor: themeOpt.color,
+                          marginRight: Spacing.three,
+                          borderWidth: 1.5,
+                          borderColor: colors.divider,
+                        }}
+                      />
+                      <Text style={[styles.themeOptionLabel, { color: colors.text, fontWeight: isSelected ? '600' : '400' }]}>
+                        {themeOpt.label}
+                      </Text>
+                    </View>
+                    {isSelected && (
+                      <Ionicons name="checkmark" size={20} color={colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
         </View>
       </Modal>
 
@@ -596,7 +686,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: '700',
     marginVertical: Spacing.two,
   },
   sectionHeader: {
@@ -619,8 +709,9 @@ const styles = StyleSheet.create({
     paddingRight: Spacing.two,
   },
   sectionCard: {
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.md,
     overflow: 'hidden',
+    borderWidth: 1,
   },
   noCustomCatText: {
     textAlign: 'center',
@@ -678,12 +769,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.three,
     paddingBottom: Spacing.two,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F0F0F0',
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   inputLabel: {
     fontSize: 12,
@@ -771,5 +862,16 @@ const styles = StyleSheet.create({
   primaryBtnText: {
     fontSize: 15,
     fontWeight: '700',
+  },
+  themeOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: Spacing.two,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  themeOptionLabel: {
+    fontSize: 16,
   },
 });

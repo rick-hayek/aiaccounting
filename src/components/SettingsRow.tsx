@@ -3,37 +3,37 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { BorderRadius, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 
 interface SettingsRowProps {
   iconName: keyof typeof Ionicons.glyphMap;
-  iconBgColor: string;
+  iconBgColor?: string; // kept for backward compat but ignored in new flat style
   label: string;
   value?: string;
   onPress?: () => void;
   showChevron?: boolean;
   showDivider?: boolean;
   rightElement?: React.ReactNode;
+  destructive?: boolean;
 }
 
 export function SettingsRow({
   iconName,
-  iconBgColor,
   label,
   value,
   onPress,
   showChevron = true,
   showDivider = true,
   rightElement,
+  destructive = false,
 }: SettingsRowProps) {
   const colors = useThemeColors();
+  const iconColor = destructive ? colors.expense : colors.textSecondary;
 
   const RowContent = (
     <View style={styles.container}>
-      <View style={[styles.iconCircle, { backgroundColor: iconBgColor }]}>
-        <Ionicons name={iconName} size={20} color="#FFFFFF" />
-      </View>
-      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+      <Ionicons name={iconName} size={22} color={iconColor} style={styles.icon} />
+      <Text style={[styles.label, { color: destructive ? colors.expense : colors.text }]}>{label}</Text>
       {value ? (
         <Text style={[styles.value, { color: colors.textSecondary }]}>{value}</Text>
       ) : null}
@@ -47,7 +47,7 @@ export function SettingsRow({
   return (
     <View style={styles.wrapper}>
       {onPress ? (
-        <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+        <TouchableOpacity onPress={onPress} activeOpacity={0.6}>
           {RowContent}
         </TouchableOpacity>
       ) : (
@@ -65,31 +65,29 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: Spacing.three,
   },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: BorderRadius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: Spacing.three,
+  icon: {
+    width: 28,
+    textAlign: 'center',
+    marginRight: 14,
   },
   label: {
     flex: 1,
-    fontSize: 15,
-    fontWeight: '500',
+    fontSize: 16,
+    fontWeight: '400',
   },
   value: {
     fontSize: 14,
+    fontWeight: '400',
     marginRight: Spacing.one,
   },
   chevron: {
     marginLeft: Spacing.one,
   },
   divider: {
-    height: 1,
-    marginLeft: 36 + Spacing.three * 2, // align with start of label text
+    height: StyleSheet.hairlineWidth,
+    marginLeft: 28 + 14 + Spacing.three, // icon width + icon marginRight + container paddingHorizontal
   },
 });

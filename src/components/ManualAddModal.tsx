@@ -110,11 +110,26 @@ export const ManualAddModal: React.FC<ManualAddModalProps> = ({
   }, [visible, editTransactionId]);
 
   const handleToggleCategory = (id: number) => {
+    const targetCat = categories.find(c => c.id === id);
+    if (!targetCat) return;
+
     setSelectedCategoryIds(prev => {
       if (prev.includes(id)) {
         return prev.filter(x => x !== id);
       } else {
-        return [...prev, id];
+        // Enforce the rule: at most one subcategory under the same parent category
+        const parentIdOfTarget = targetCat.parent_id;
+
+        const filtered = prev.filter(x => {
+          const cat = categories.find(c => c.id === x);
+          if (!cat) return true;
+          if (parentIdOfTarget !== null && cat.parent_id === parentIdOfTarget) {
+            return false;
+          }
+          return true;
+        });
+
+        return [...filtered, id];
       }
     });
   };

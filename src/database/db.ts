@@ -42,7 +42,7 @@ export interface UserSetting {
 // --- Migration & Schema Setup ---
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
-  const DATABASE_VERSION = 1;
+  const DATABASE_VERSION = 2;
   
   // Enable foreign keys
   await db.execAsync('PRAGMA foreign_keys = ON;');
@@ -68,26 +68,26 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
       CREATE TABLE IF NOT EXISTS categories (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name_key TEXT NOT NULL,
-        type TEXT NOT NULL CHECK(type IN ('expense', 'income')),
+        type TEXT NOT NULL, -- 'expense' | 'income'
         icon TEXT,
         color TEXT,
-        is_custom INTEGER DEFAULT 0,
+        is_custom INTEGER DEFAULT 0, -- 0 = default, 1 = user custom
         parent_id INTEGER,
         FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE CASCADE
       );
 
       CREATE TABLE IF NOT EXISTS transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        type TEXT NOT NULL CHECK(type IN ('expense', 'income')),
+        type TEXT NOT NULL, -- 'expense' | 'income'
         amount REAL NOT NULL,
         date TEXT NOT NULL, -- YYYY-MM-DD
         note TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE TABLE IF NOT EXISTS transaction_categories (
-        transaction_id INTEGER NOT NULL,
-        category_id INTEGER NOT NULL,
+        transaction_id INTEGER,
+        category_id INTEGER,
         PRIMARY KEY (transaction_id, category_id),
         FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
         FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
@@ -95,8 +95,7 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
 
       CREATE TABLE IF NOT EXISTS budgets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        type TEXT NOT NULL CHECK(type IN ('category', 'month', 'year')),
-        category_id INTEGER,
+        category_id INTEGER UNIQUE,
         amount REAL NOT NULL,
         period TEXT NOT NULL, -- e.g. YYYY-MM or YYYY
         warning_threshold REAL DEFAULT 0.8,
@@ -134,41 +133,91 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
       `INSERT OR IGNORE INTO user_settings (setting_key, setting_value) VALUES (?, ?)`,
       'ai_model', 'gpt-4o-mini'
     );
+    await db.runAsync(
+      `INSERT OR IGNORE INTO user_settings (setting_key, setting_value) VALUES (?, ?)`,
+      'theme_mode', 'system'
+    );
+    await db.runAsync(
+      `INSERT OR IGNORE INTO user_settings (setting_key, setting_value) VALUES (?, ?)`,
+      'theme_color', 'green'
+    );
 
     // 3. Seed Root/Parent Categories
     // Expense Parents
-    const parentDailyId = await insertCategoryRow(db, 'category.parent.daily', 'expense', 'card-outline', '#4CAF50', null);
-    const parentFixedId = await insertCategoryRow(db, 'category.parent.fixed', 'expense', 'home-outline', '#2196F3', null);
-    const parentFlexibleId = await insertCategoryRow(db, 'category.parent.flexible', 'expense', 'gift-outline', '#9C27B0', null);
+    const parentDailyId = await insertCategoryRow(db, 'category.parent.daily', 'expense', 'card-outline', '#A5D6A7', null);
+    const parentFixedId = await insertCategoryRow(db, 'category.parent.fixed', 'expense', 'home-outline', '#90CAF9', null);
+    const parentFlexibleId = await insertCategoryRow(db, 'category.parent.flexible', 'expense', 'gift-outline', '#CE93D8', null);
     // Income Parent
-    const parentIncomeId = await insertCategoryRow(db, 'category.parent.income', 'income', 'wallet-outline', '#FF9800', null);
+    const parentIncomeId = await insertCategoryRow(db, 'category.parent.income', 'income', 'wallet-outline', '#FFE082', null);
 
     // Seed Child Categories
     // Daily Expenses children
-    await insertCategoryRow(db, 'category.daily.food', 'expense', 'fast-food-outline', '#FF5722', parentDailyId);
-    await insertCategoryRow(db, 'category.daily.transport', 'expense', 'car-outline', '#03A9F4', parentDailyId);
-    await insertCategoryRow(db, 'category.daily.necessities', 'expense', 'basket-outline', '#8BC34A', parentDailyId);
-    await insertCategoryRow(db, 'category.daily.entertainment', 'expense', 'play-outline', '#E91E63', parentDailyId);
+    await insertCategoryRow(db, 'category.daily.food', 'expense', 'fast-food-outline', '#FFCDD2', parentDailyId);
+    await insertCategoryRow(db, 'category.daily.transport', 'expense', 'car-outline', '#B3E5FC', parentDailyId);
+    await insertCategoryRow(db, 'category.daily.necessities', 'expense', 'basket-outline', '#DCEDC8', parentDailyId);
+    await insertCategoryRow(db, 'category.daily.entertainment', 'expense', 'play-outline', '#F8BBD0', parentDailyId);
 
     // Fixed Expenses children
-    await insertCategoryRow(db, 'category.fixed.rent', 'expense', 'business-outline', '#795548', parentFixedId);
-    await insertCategoryRow(db, 'category.fixed.property', 'expense', 'shield-checkmark-outline', '#607D8B', parentFixedId);
-    await insertCategoryRow(db, 'category.fixed.utilities', 'expense', 'water-outline', '#00BCD4', parentFixedId);
-    await insertCategoryRow(db, 'category.fixed.digital', 'expense', 'phone-portrait-outline', '#3F51B5', parentFixedId);
-    await insertCategoryRow(db, 'category.fixed.appliances', 'expense', 'tv-outline', '#9E9E9E', parentFixedId);
+    await insertCategoryRow(db, 'category.fixed.rent', 'expense', 'business-outline', '#D7CCC8', parentFixedId);
+    await insertCategoryRow(db, 'category.fixed.property', 'expense', 'shield-checkmark-outline', '#CFD8DC', parentFixedId);
+    await insertCategoryRow(db, 'category.fixed.utilities', 'expense', 'water-outline', '#B2EBF2', parentFixedId);
+    await insertCategoryRow(db, 'category.fixed.digital', 'expense', 'phone-portrait-outline', '#C5CAE9', parentFixedId);
+    await insertCategoryRow(db, 'category.fixed.appliances', 'expense', 'tv-outline', '#F5F5F5', parentFixedId);
 
     // Flexible Expenses children
-    await insertCategoryRow(db, 'category.flexible.social', 'expense', 'people-outline', '#E040FB', parentFlexibleId);
-    await insertCategoryRow(db, 'category.flexible.self_improvement', 'expense', 'book-outline', '#009688', parentFlexibleId);
-    await insertCategoryRow(db, 'category.flexible.clothing', 'expense', 'shirt-outline', '#FF4081', parentFlexibleId);
-    await insertCategoryRow(db, 'category.flexible.travel', 'expense', 'airplane-outline', '#FFC107', parentFlexibleId);
+    await insertCategoryRow(db, 'category.flexible.social', 'expense', 'people-outline', '#E1BEE7', parentFlexibleId);
+    await insertCategoryRow(db, 'category.flexible.self_improvement', 'expense', 'book-outline', '#B2DFDB', parentFlexibleId);
+    await insertCategoryRow(db, 'category.flexible.clothing', 'expense', 'shirt-outline', '#FFCC80', parentFlexibleId);
+    await insertCategoryRow(db, 'category.flexible.travel', 'expense', 'airplane-outline', '#FFF9C4', parentFlexibleId);
 
     // Income children
-    await insertCategoryRow(db, 'category.income.salary', 'income', 'cash-outline', '#4CAF50', parentIncomeId);
-    await insertCategoryRow(db, 'category.income.finance', 'income', 'trending-up-outline', '#00E676', parentIncomeId);
-    await insertCategoryRow(db, 'category.income.windfall', 'income', 'gift-outline', '#FFD600', parentIncomeId);
+    await insertCategoryRow(db, 'category.income.salary', 'income', 'cash-outline', '#C8E6C9', parentIncomeId);
+    await insertCategoryRow(db, 'category.income.finance', 'income', 'trending-up-outline', '#B2DFDB', parentIncomeId);
+    await insertCategoryRow(db, 'category.income.windfall', 'income', 'gift-outline', '#FFF9C4', parentIncomeId);
 
     currentDbVersion = 1;
+  }
+
+  if (currentDbVersion < 2) {
+    // Seed new theme settings for existing users
+    await db.runAsync(
+      `INSERT OR IGNORE INTO user_settings (setting_key, setting_value) VALUES (?, ?)`,
+      'theme_mode', 'system'
+    );
+    await db.runAsync(
+      `INSERT OR IGNORE INTO user_settings (setting_key, setting_value) VALUES (?, ?)`,
+      'theme_color', 'green'
+    );
+
+    // Update existing default category colors to pastels
+    await db.execAsync(`
+      UPDATE categories SET color = '#A5D6A7' WHERE name_key = 'category.parent.daily';
+      UPDATE categories SET color = '#90CAF9' WHERE name_key = 'category.parent.fixed';
+      UPDATE categories SET color = '#CE93D8' WHERE name_key = 'category.parent.flexible';
+      UPDATE categories SET color = '#FFE082' WHERE name_key = 'category.parent.income';
+      
+      UPDATE categories SET color = '#FFCDD2' WHERE name_key = 'category.daily.food';
+      UPDATE categories SET color = '#B3E5FC' WHERE name_key = 'category.daily.transport';
+      UPDATE categories SET color = '#DCEDC8' WHERE name_key = 'category.daily.necessities';
+      UPDATE categories SET color = '#F8BBD0' WHERE name_key = 'category.daily.entertainment';
+      
+      UPDATE categories SET color = '#D7CCC8' WHERE name_key = 'category.fixed.rent';
+      UPDATE categories SET color = '#CFD8DC' WHERE name_key = 'category.fixed.property';
+      UPDATE categories SET color = '#B2EBF2' WHERE name_key = 'category.fixed.utilities';
+      UPDATE categories SET color = '#C5CAE9' WHERE name_key = 'category.fixed.digital';
+      UPDATE categories SET color = '#F5F5F5' WHERE name_key = 'category.fixed.appliances';
+      
+      UPDATE categories SET color = '#E1BEE7' WHERE name_key = 'category.flexible.social';
+      UPDATE categories SET color = '#B2DFDB' WHERE name_key = 'category.flexible.self_improvement';
+      UPDATE categories SET color = '#FFCC80' WHERE name_key = 'category.flexible.clothing';
+      UPDATE categories SET color = '#FFF9C4' WHERE name_key = 'category.flexible.travel';
+      
+      UPDATE categories SET color = '#C8E6C9' WHERE name_key = 'category.income.salary';
+      UPDATE categories SET color = '#B2DFDB' WHERE name_key = 'category.income.finance';
+      UPDATE categories SET color = '#FFF9C4' WHERE name_key = 'category.income.windfall';
+    `);
+
+    currentDbVersion = 2;
   }
 
   await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);

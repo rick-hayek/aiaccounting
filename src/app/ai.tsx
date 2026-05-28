@@ -21,7 +21,7 @@ import { useSettings } from '@/context/SettingsContext';
 import { getCategories, addTransaction, Category } from '@/database/db';
 import { parseTransactionWithAi, ParsedTransaction } from '@/utils/ai';
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { BorderRadius, Shadows, Spacing } from '@/constants/theme';
+import { BorderRadius, Spacing } from '@/constants/theme';
 import { getCurrencySymbol } from '@/utils/currency';
 
 // Safe dynamic import for expo-speech-recognition to prevent crashes in Expo Go
@@ -100,7 +100,6 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
         style={[
           styles.voiceButton,
           { backgroundColor: isRecording ? colors.expense : colors.primary },
-          Shadows.fab,
         ]}
         onPressIn={startSpeech}
         onPressOut={stopSpeech}
@@ -261,7 +260,7 @@ export default function AiScreen() {
       >
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {/* Natural Language Box */}
-          <View style={[styles.inputContainer, { backgroundColor: colors.surface }, Shadows.card]}>
+          <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
             <TextInput
               multiline
               value={inputText}
@@ -306,7 +305,7 @@ export default function AiScreen() {
                 {phrases.map((phrase, i) => (
                   <TouchableOpacity
                     key={i}
-                    style={[styles.phraseChip, { backgroundColor: colors.surface }, Shadows.card]}
+                    style={[styles.phraseChip, { backgroundColor: colors.surfaceElevated }]}
                     onPress={() => handlePhrasePress(phrase.raw)}
                   >
                     <Text style={[styles.phraseText, { color: colors.text }]}>{phrase.text}</Text>
@@ -339,7 +338,7 @@ export default function AiScreen() {
               </Text>
 
               {parsedResults.map((tx, index) => (
-                <View key={index} style={[styles.previewCard, { backgroundColor: colors.surface }, Shadows.card]}>
+                <View key={index} style={[styles.previewCard, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
                   <View style={styles.previewRow}>
                     <Text style={[styles.previewLabel, { color: colors.textSecondary }]}>
                       {t('common.type')}
@@ -349,7 +348,7 @@ export default function AiScreen() {
                         styles.previewVal,
                         {
                           color: tx.type === 'expense' ? colors.expense : colors.income,
-                          fontWeight: '800',
+                          fontWeight: '700',
                         },
                       ]}
                     >
@@ -361,7 +360,7 @@ export default function AiScreen() {
                     <Text style={[styles.previewLabel, { color: colors.textSecondary }]}>
                       {t('common.amount')}
                     </Text>
-                    <Text style={[styles.previewVal, { color: colors.text, fontWeight: '800', fontSize: 16 }]}>
+                    <Text style={[styles.previewVal, { color: colors.text, fontWeight: '700', fontSize: 16 }]}>
                       {currencySymbol}
                       {tx.amount.toFixed(2)}
                     </Text>
@@ -457,19 +456,20 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   content: {
     paddingHorizontal: Spacing.four,
     paddingBottom: 40,
   },
   inputContainer: {
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.md,
     padding: Spacing.four,
     minHeight: 130,
     position: 'relative',
     marginTop: Spacing.two,
     marginBottom: Spacing.three,
+    borderWidth: 1,
   },
   textInput: {
     fontSize: 16,
@@ -557,10 +557,11 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.three,
   },
   previewCard: {
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.md,
     padding: Spacing.four,
     marginBottom: Spacing.four,
     gap: Spacing.three,
+    borderWidth: 1,
   },
   previewRow: {
     flexDirection: 'row',

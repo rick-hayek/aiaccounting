@@ -21,7 +21,7 @@ import { MonthlySummaryCard } from '@/components/MonthlySummaryCard';
 import { QuickEntryGrid } from '@/components/QuickEntryGrid';
 import { TransactionItem } from '@/components/TransactionItem';
 import { ManualAddModal } from '@/components/ManualAddModal';
-import { BorderRadius, Shadows, Spacing } from '@/constants/theme';
+import { BorderRadius, Spacing } from '@/constants/theme';
 import { getCurrencySymbol } from '@/utils/currency';
 
 export default function HomeScreen() {
@@ -71,35 +71,7 @@ export default function HomeScreen() {
   );
 
   const handleTransactionAction = (tx: Transaction) => {
-    Alert.alert(
-      t('common.confirm'),
-      `${tx.note || t('add_tx.title_add')} - ${currencySymbol}${tx.amount.toFixed(2)}`,
-      [
-        {
-          text: t('common.cancel'),
-          style: 'cancel',
-        },
-        {
-          text: t('common.edit'),
-          onPress: () => {
-            setEditTxId(tx.id);
-            setManualModalVisible(true);
-          },
-        },
-        {
-          text: t('common.delete'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteTransaction(db, tx.id);
-              loadHomeData();
-            } catch (e) {
-              Alert.alert(t('common.error'), 'Failed to delete transaction');
-            }
-          },
-        },
-      ]
-    );
+    router.navigate({ pathname: '/edit', params: { id: tx.id.toString() } } as any);
   };
 
   const getGreeting = () => {
@@ -110,6 +82,10 @@ export default function HomeScreen() {
   };
 
   const handleVoicePress = () => {
+    router.navigate('/ai' as any);
+  };
+
+  const handleAiPress = () => {
     router.navigate('/ai' as any);
   };
 
@@ -158,6 +134,7 @@ export default function HomeScreen() {
         {/* Quick entry grid */}
         <QuickEntryGrid
           onVoice={handleVoicePress}
+          onAi={handleAiPress}
           onManual={handleManualPress}
           onScan={handleScanPress}
         />
@@ -176,7 +153,7 @@ export default function HomeScreen() {
           </View>
 
           {recentTransactions.length === 0 ? (
-            <View style={[styles.emptyContainer, { backgroundColor: colors.surface }, Shadows.card]}>
+            <View style={[styles.emptyContainer, { backgroundColor: colors.surfaceElevated }]}>
               <Ionicons name="receipt-outline" size={32} color={colors.textSecondary} style={{ marginBottom: Spacing.two }} />
               <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
                 {t('home.no_transactions')}
@@ -236,11 +213,11 @@ const styles = StyleSheet.create({
   },
   greetingText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   titleText: {
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: '700',
     marginTop: 2,
   },
   avatarCircle: {
@@ -261,21 +238,25 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.three,
   },
   recentTitle: {
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
   },
   viewAllText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   emptyContainer: {
     padding: Spacing.five,
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emptyText: {
     fontSize: 14,
     textAlign: 'center',
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: 52,
   },
 });

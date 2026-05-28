@@ -53,7 +53,7 @@ Rules:
 2. Extract the amount. If the user specifies a currency (e.g. "10美元", "50 euros", "$100", "¥3000"), extract that currency code (e.g. USD, EUR, CNY). If no currency is specified, set "currency" to null.
 3. Compute the date of the transaction in "YYYY-MM-DD" format. If the user mentions relative dates like "yesterday", "today", "last Monday", calculate it based on today's date (${currentDate}).
 4. Extract or summarize a short note (description) for the transaction.
-5. Select one or more appropriate category IDs from the list above that best fit the transaction and put them in "matched_category_ids". If multiple dimensions apply (e.g. eating out with friends -> Daily/Food and Flexible/Social), list both category IDs.
+5. Select one or more appropriate category IDs from the list above that best fit the transaction and put them in "matched_category_ids". Important: For any single transaction, you can select at most one subcategory under the same parent category (i.e. all selected subcategories must belong to different parent categories).
 6. Return a strict JSON object with a single root key "transactions", which is an array of transaction objects.
 7. Do not include any markdown styling, explanation or backticks in the response. Return ONLY valid JSON.
 
@@ -125,13 +125,30 @@ JSON Output Schema:
         tx.note = `${tx.note} (${tx.amount} ${tx.currency.toUpperCase()} @ rate ${conversion.rate})`;
       }
 
+      // Filter matched categories to ensure at most one per parent
+      const selectedIds: number[] = [];
+      const parentSeen = new Set<number>();
+      for (const catId of (tx.matched_category_ids || [])) {
+        const cat = categories.find(c => c.id === catId);
+        if (cat) {
+          if (cat.parent_id !== null) {
+            if (!parentSeen.has(cat.parent_id)) {
+              parentSeen.add(cat.parent_id);
+              selectedIds.push(catId);
+            }
+          } else {
+            selectedIds.push(catId);
+          }
+        }
+      }
+
       processedTransactions.push({
         type: tx.type || 'expense',
         amount: finalAmount,
         currency: settings.defaultCurrency,
         note: tx.note || '',
         date: tx.date || currentDate,
-        matched_category_ids: tx.matched_category_ids || []
+        matched_category_ids: selectedIds
       });
     }
 

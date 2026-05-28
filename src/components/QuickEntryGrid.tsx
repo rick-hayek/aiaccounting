@@ -1,25 +1,67 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { BorderRadius, Shadows, Spacing } from '@/constants/theme';
+import { BorderRadius, Spacing } from '@/constants/theme';
 
 interface QuickEntryGridProps {
   onVoice: () => void;
+  onAi: () => void;
   onManual: () => void;
   onScan: () => void;
 }
 
-export function QuickEntryGrid({ onVoice, onManual, onScan }: QuickEntryGridProps) {
+export function QuickEntryGrid({ onVoice, onAi, onManual, onScan }: QuickEntryGridProps) {
   const { t } = useTranslation();
   const colors = useThemeColors();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
+  // Define adaptive backgrounds and icon colors for Voice, Manual, and Scan entries
+  const voiceBg = isDark ? '#0C2B3F' : '#E0F2FE';
+  const voiceIcon = isDark ? '#38BDF8' : '#0284C7';
+
+  const manualBg = isDark ? '#2D2305' : '#FEF3C7';
+  const manualIcon = isDark ? '#F59E0B' : '#D97706';
+
+  const scanBg = isDark ? '#25143A' : '#F3E8FF';
+  const scanIcon = isDark ? '#A78BFA' : '#7C3AED';
 
   const entries = [
-    { key: 'voice', icon: 'mic-outline' as const, label: t('quick.voice'), onPress: onVoice },
-    { key: 'manual', icon: 'create-outline' as const, label: t('quick.manual'), onPress: onManual },
-    { key: 'scan', icon: 'scan-outline' as const, label: t('quick.scan'), onPress: onScan },
+    {
+      key: 'ai',
+      icon: 'sparkles-outline' as const,
+      label: t('quick.ai'),
+      onPress: onAi,
+      iconColor: colors.primary,
+      iconBg: colors.primarySurface,
+    },
+    {
+      key: 'voice',
+      icon: 'mic-outline' as const,
+      label: t('quick.voice'),
+      onPress: onVoice,
+      iconColor: voiceIcon,
+      iconBg: voiceBg,
+    },
+    {
+      key: 'manual',
+      icon: 'create-outline' as const,
+      label: t('quick.manual'),
+      onPress: onManual,
+      iconColor: manualIcon,
+      iconBg: manualBg,
+    },
+    {
+      key: 'scan',
+      icon: 'scan-outline' as const,
+      label: t('quick.scan'),
+      onPress: onScan,
+      iconColor: scanIcon,
+      iconBg: scanBg,
+    },
   ];
 
   return (
@@ -31,14 +73,16 @@ export function QuickEntryGrid({ onVoice, onManual, onScan }: QuickEntryGridProp
         {entries.map(entry => (
           <TouchableOpacity
             key={entry.key}
-            style={[styles.entryButton, { backgroundColor: colors.surface }, Shadows.card]}
+            style={[styles.entryButton, { backgroundColor: colors.surface, borderColor: colors.divider }]}
             onPress={entry.onPress}
             activeOpacity={0.7}
           >
-            <View style={[styles.iconCircle, { backgroundColor: colors.primarySurface }]}>
-              <Ionicons name={entry.icon} size={24} color={colors.primary} />
+            <View style={[styles.iconContainer, { backgroundColor: entry.iconBg }]}>
+              <Ionicons name={entry.icon} size={20} color={entry.iconColor} />
             </View>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>{entry.label}</Text>
+            <Text style={[styles.label, { color: colors.text }]} numberOfLines={1}>
+              {entry.label}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -52,30 +96,33 @@ const styles = StyleSheet.create({
     marginTop: Spacing.four,
   },
   sectionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     marginBottom: Spacing.three,
   },
   grid: {
     flexDirection: 'row',
-    gap: Spacing.three,
+    justifyContent: 'space-between',
+    gap: Spacing.two,
   },
   entryButton: {
     flex: 1,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
     alignItems: 'center',
-    paddingVertical: Spacing.four,
-    borderRadius: BorderRadius.lg,
+    justifyContent: 'center',
+    paddingVertical: Spacing.three,
   },
-  iconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: BorderRadius.lg,
+  iconContainer: {
+    width: 42,
+    height: 42,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.two,
   },
   label: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500',
   },
 });

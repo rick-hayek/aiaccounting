@@ -10,6 +10,8 @@ export interface SettingsContextType {
   aiApiKey: string;
   aiApiUrl: string;
   aiModel: string;
+  themeMode: string;
+  themeColor: string;
   loading: boolean;
   updateAppSetting: (key: string, value: string) => Promise<void>;
   refreshSettings: () => Promise<void>;
@@ -26,6 +28,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [aiApiKey, setAiApiKey] = useState<string>('');
   const [aiApiUrl, setAiApiUrl] = useState<string>('https://api.openai.com/v1');
   const [aiModel, setAiModel] = useState<string>('gpt-4o-mini');
+  const [themeMode, setThemeMode] = useState<string>('system');
+  const [themeColor, setThemeColor] = useState<string>('green');
   const [loading, setLoading] = useState<boolean>(true);
 
   const refreshSettings = async () => {
@@ -52,6 +56,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
       if (data.ai_model) {
         setAiModel(data.ai_model);
+      }
+      if (data.theme_mode) {
+        setThemeMode(data.theme_mode);
+      }
+      if (data.theme_color) {
+        setThemeColor(data.theme_color);
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -82,6 +92,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setAiApiUrl(value);
       } else if (key === 'ai_model') {
         setAiModel(value);
+      } else if (key === 'theme_mode') {
+        setThemeMode(value);
+      } else if (key === 'theme_color') {
+        setThemeColor(value);
       }
     } catch (error) {
       console.error(`Failed to update setting ${key}:`, error);
@@ -98,6 +112,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         aiApiKey,
         aiApiUrl,
         aiModel,
+        themeMode,
+        themeColor,
         loading,
         updateAppSetting,
         refreshSettings,

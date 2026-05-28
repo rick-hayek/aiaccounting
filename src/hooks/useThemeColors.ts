@@ -1,14 +1,28 @@
 import { useColorScheme } from 'react-native';
 import { Themes, DEFAULT_THEME, type ThemeColors } from '@/constants/theme';
+import { useSettings } from '@/context/SettingsContext';
 
 /**
- * Returns the active theme colors based on system color scheme.
- * In the future, themeKey can be read from user settings to support
- * swappable themes (e.g. 'green', 'blue', 'purple').
+ * Returns the active theme colors based on dynamic user settings.
  */
-export function useThemeColors(themeKey: string = DEFAULT_THEME): ThemeColors {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const theme = Themes[themeKey] ?? Themes[DEFAULT_THEME];
+export function useThemeColors(themeKey?: string): ThemeColors {
+  const systemColorScheme = useColorScheme();
+  
+  let settings;
+  try {
+    settings = useSettings();
+  } catch (e) {
+    // Fallback if settings context is not initialized yet
+    settings = { themeMode: 'system', themeColor: DEFAULT_THEME };
+  }
+
+  const themeMode = settings.themeMode || 'system';
+  const activeColorKey = themeKey || settings.themeColor || DEFAULT_THEME;
+
+  const isDark = themeMode === 'system' 
+    ? systemColorScheme === 'dark' 
+    : themeMode === 'dark';
+
+  const theme = Themes[activeColorKey] ?? Themes[DEFAULT_THEME];
   return isDark ? theme.dark : theme.light;
 }
