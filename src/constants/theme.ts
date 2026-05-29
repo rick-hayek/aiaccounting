@@ -103,6 +103,110 @@ export const Themes: Record<string, AppTheme> = {
       tabIconSelected: '#8DE03D',
     },
   },
+  sage: {
+    light: {
+      primary: '#527954',
+      primaryLight: '#709A72',
+      primarySurface: '#EDF5EE',
+      primaryGradientStart: '#527954',
+      primaryGradientEnd: '#527954',
+
+      background: '#FFFFFF',
+      surface: '#FFFFFF',
+      surfaceElevated: '#F5F7F5',
+
+      text: '#1A231A',
+      textSecondary: '#8E9E8E',
+      textOnPrimary: '#FFFFFF',
+
+      income: '#527954',
+      expense: '#DC3545',
+      warning: '#F59E0B',
+      divider: '#F0F3F0',
+
+      tabBar: '#FFFFFF',
+      tabBarBorder: '#F0F3F0',
+      tabIconDefault: '#B8C4B8',
+      tabIconSelected: '#527954',
+    },
+    dark: {
+      primary: '#8EB790',
+      primaryLight: '#A8CEA9',
+      primarySurface: '#1E2D1F',
+      primaryGradientStart: '#527954',
+      primaryGradientEnd: '#527954',
+
+      background: '#111612',
+      surface: '#1B221C',
+      surfaceElevated: '#262E27',
+
+      text: '#F1F5F1',
+      textSecondary: '#8E9E8E',
+      textOnPrimary: '#FFFFFF',
+
+      income: '#8EB790',
+      expense: '#FF8A80',
+      warning: '#FFE082',
+      divider: '#262E27',
+
+      tabBar: '#1B221C',
+      tabBarBorder: '#262E27',
+      tabIconDefault: '#5A665C',
+      tabIconSelected: '#8EB790',
+    },
+  },
+  skyblue: {
+    light: {
+      primary: '#70C4FF',
+      primaryLight: '#9BD6FF',
+      primarySurface: '#F0F8FF',
+      primaryGradientStart: '#70C4FF',
+      primaryGradientEnd: '#70C4FF',
+
+      background: '#FFFFFF',
+      surface: '#FFFFFF',
+      surfaceElevated: '#F2F7FC',
+
+      text: '#0D1B2A',
+      textSecondary: '#7C95B0',
+      textOnPrimary: '#FFFFFF',
+
+      income: '#70C4FF',
+      expense: '#DC3545',
+      warning: '#F59E0B',
+      divider: '#E1EBF5',
+
+      tabBar: '#FFFFFF',
+      tabBarBorder: '#E1EBF5',
+      tabIconDefault: '#C2D1E0',
+      tabIconSelected: '#70C4FF',
+    },
+    dark: {
+      primary: '#70C4FF',
+      primaryLight: '#A6E2FF',
+      primarySurface: '#0D233A',
+      primaryGradientStart: '#70C4FF',
+      primaryGradientEnd: '#70C4FF',
+
+      background: '#070F18',
+      surface: '#0C1826',
+      surfaceElevated: '#13253B',
+
+      text: '#F2F7FC',
+      textSecondary: '#7C95B0',
+      textOnPrimary: '#FFFFFF',
+
+      income: '#70C4FF',
+      expense: '#FF8A80',
+      warning: '#FFE082',
+      divider: '#13253B',
+
+      tabBar: '#0C1826',
+      tabBarBorder: '#13253B',
+      tabIconDefault: '#475E78',
+      tabIconSelected: '#70C4FF',
+    },
+  },
   blue: {
     light: {
       primary: '#4A6D8C',

@@ -337,6 +337,13 @@ export default function SettingsScreen({ isActive }: SettingsScreenProps) {
         </Text>
         <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
           <SettingsRow
+            iconName="cloud-upload-outline"
+            label={t('settings.import_data')}
+            value="CSV / JSON"
+            onPress={() => router.push('/import' as any)}
+            showDivider={true}
+          />
+          <SettingsRow
             iconName="download-outline"
             label={t('settings.export_data')}
             value="CSV / JSON"
@@ -501,8 +508,10 @@ export default function SettingsScreen({ isActive }: SettingsScreenProps) {
 
             <View style={{ paddingVertical: Spacing.two }}>
                {[
-                { key: 'green', label: t('settings.sage_green'), color: '#66AA22' },
+                { key: 'green', label: t('settings.grass_green'), color: '#66AA22' },
+                { key: 'sage', label: t('settings.sage_green'), color: '#527954' },
                 { key: 'blue', label: t('settings.slate_blue'), color: '#4A6D8C' },
+                { key: 'skyblue', label: t('settings.sky_blue'), color: '#70C4FF' },
                 { key: 'gold', label: t('settings.sand_gold'), color: '#8C7355' },
                 { key: 'black', label: t('settings.charcoal_black'), color: '#1A1A1A' },
                 { key: 'red', label: t('settings.berry_red'), color: '#B34766' },

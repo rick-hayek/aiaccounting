@@ -21,7 +21,7 @@ import LedgerScreen from './ledger';
 import SettingsScreen from './settings';
 
 export default function RootIndex() {
-  if (Platform.OS === 'web') {
+  if (Platform.OS === 'web' || Platform.OS === 'ios') {
     return <HomeScreenContent />;
   }
   return <MobileTabContainer />;
