@@ -19,6 +19,8 @@ import { router } from 'expo-router';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { getTransactions, Transaction } from '@/database/db';
 import { BorderRadius, Spacing } from '@/constants/theme';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 
 type ExportFormat = 'csv' | 'json';
 
@@ -134,10 +136,26 @@ export default function ExportScreen() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       } else {
-        await Share.share({
-          message: dataText,
-          title: `AIAccounting Export (${format.toUpperCase()})`,
+        const filename = `aia_export_${new Date().toISOString().split('T')[0]}.${format}`;
+        const fileUri = `${FileSystem.documentDirectory}${filename}`;
+        
+        await FileSystem.writeAsStringAsync(fileUri, dataText, {
+          encoding: FileSystem.EncodingType.UTF8,
         });
+
+        const canShare = await Sharing.isAvailableAsync();
+        if (canShare) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: format === 'csv' ? 'text/csv' : 'application/json',
+            dialogTitle: `AIAccounting Export (${format.toUpperCase()})`,
+            UTI: format === 'csv' ? 'public.comma-separated-values-text' : 'public.json',
+          });
+        } else {
+          await Share.share({
+            message: dataText,
+            title: `AIAccounting Export (${format.toUpperCase()})`,
+          });
+        }
       }
     } catch (e) {
       console.error('Export failed:', e);

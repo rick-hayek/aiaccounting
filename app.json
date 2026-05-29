@@ -37,7 +37,8 @@
       ],
       "expo-sqlite",
       "expo-localization",
-      "expo-speech-recognition"
+      "expo-speech-recognition",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

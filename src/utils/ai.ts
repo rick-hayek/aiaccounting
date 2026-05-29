@@ -32,7 +32,21 @@ export async function parseTransactionWithAi(
     defaultCurrency: string;
   }
 ): Promise<AiParseResult> {
-  if (!settings.apiKey) {
+  let apiKey = settings.apiKey;
+  let apiUrl = settings.apiUrl;
+  let model = settings.model;
+
+  if (settings.provider === 'app_default') {
+    const isDev = __DEV__ || process.env.EXPO_PUBLIC_ENV === 'development';
+    if (!isDev) {
+      return { success: false, error: 'settings.ai_provider_app_default_prod_coming_soon' };
+    }
+    apiKey = apiKey || process.env.EXPO_PUBLIC_AI_API_KEY || '';
+    apiUrl = apiUrl || process.env.EXPO_PUBLIC_AI_API_URL || '';
+    model = model || process.env.EXPO_PUBLIC_AI_MODEL || '';
+  }
+
+  if (!apiKey) {
     return { success: false, error: 'settings.no_key_warning' };
   }
 
@@ -73,20 +87,20 @@ JSON Output Schema:
 `;
 
   try {
-    const response = await fetch(`${settings.apiUrl}/chat/completions`, {
+    const response = await fetch(`${apiUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${settings.apiKey}`
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: settings.model,
+        model: model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: text }
         ],
         temperature: 0.1,
-        response_format: settings.model.includes('gpt') ? { type: 'json_object' } : undefined
+        response_format: model.includes('gpt') ? { type: 'json_object' } : undefined
       })
     });
 

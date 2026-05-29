@@ -10,6 +10,8 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  useColorScheme,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -133,6 +135,19 @@ export default function AiScreen() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [parsedResults, setParsedResults] = useState<ParsedTransaction[] | null>(null);
 
+  const systemColorScheme = useColorScheme();
+  const { themeMode } = settings;
+  const isDark = themeMode === 'system' ? systemColorScheme === 'dark' : themeMode === 'dark';
+
+  // Editing state for AI generated transaction
+  const [editModalVisible, setEditModalVisible] = useState<boolean>(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editType, setEditType] = useState<'expense' | 'income'>('expense');
+  const [editAmount, setEditAmount] = useState<string>('');
+  const [editNote, setEditNote] = useState<string>('');
+  const [editDate, setEditDate] = useState<string>('');
+  const [editSelectedCategoryIds, setEditSelectedCategoryIds] = useState<number[]>([]);
+
   // Load categories
   const loadCategories = useCallback(async () => {
     try {
@@ -201,17 +216,105 @@ export default function AiScreen() {
         }
         await addTransaction(db, tx.type, tx.amount, tx.date, tx.note, tx.matched_category_ids);
       }
-      Alert.alert(t('common.success'), 'AI Transaction saved successfully!', [
-        {
-          text: t('common.confirm'),
-          onPress: () => {
-            router.replace('/');
-          },
-        },
-      ]);
+      router.replace('/');
     } catch (e) {
       Alert.alert(t('common.error'), 'Failed to save transaction');
     }
+  };
+
+  const handleEditParsedItem = (index: number) => {
+    if (!parsedResults) return;
+    const tx = parsedResults[index];
+    setEditingIndex(index);
+    setEditType(tx.type);
+    setEditAmount(tx.amount.toString());
+    setEditNote(tx.note || '');
+    setEditDate(tx.date);
+    setEditSelectedCategoryIds(tx.matched_category_ids || []);
+    setEditModalVisible(true);
+  };
+
+  const handleToggleEditCategory = (id: number) => {
+    const targetCat = categories.find((c) => c.id === id);
+    if (!targetCat) return;
+
+    setEditSelectedCategoryIds((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((x) => x !== id);
+      } else {
+        const parentIdOfTarget = targetCat.parent_id;
+        const filtered = prev.filter((x) => {
+          const cat = categories.find((c) => c.id === x);
+          if (!cat) return true;
+          if (parentIdOfTarget !== null && cat.parent_id === parentIdOfTarget) {
+            return false;
+          }
+          return true;
+        });
+        return [...filtered, id];
+      }
+    });
+  };
+
+  const getGroupedEditCategories = () => {
+    const parents = categories.filter((c) => c.parent_id === null && c.type === editType);
+    const result: { parent: Category; children: Category[] }[] = [];
+
+    for (const parent of parents) {
+      const children = categories.filter((c) => c.parent_id === parent.id);
+      result.push({ parent, children });
+    }
+
+    const orphans = categories.filter((c) => c.parent_id === null && c.is_custom === 1 && c.type === editType);
+    if (orphans.length > 0) {
+      result.push({
+        parent: {
+          id: -99,
+          name_key: 'Other',
+          type: editType,
+          icon: 'list',
+          color: '#9E9E9E',
+          is_custom: 0,
+          parent_id: null,
+        },
+        children: orphans,
+      });
+    }
+
+    return result;
+  };
+
+  const handleSaveEditItem = () => {
+    if (editingIndex === null || !parsedResults) return;
+    const parsedAmount = parseFloat(editAmount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      Alert.alert(t('common.error'), t('add_tx.amount_error') || 'Please enter a valid amount');
+      return;
+    }
+    if (editSelectedCategoryIds.length === 0) {
+      Alert.alert(t('common.error'), t('add_tx.empty_category_error') || 'Please select at least one category');
+      return;
+    }
+
+    // Verify date format YYYY-MM-DD
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(editDate)) {
+      Alert.alert(t('common.error'), '日期格式错误，请使用 YYYY-MM-DD');
+      return;
+    }
+
+    const updated = [...parsedResults];
+    updated[editingIndex] = {
+      ...updated[editingIndex],
+      type: editType,
+      amount: parsedAmount,
+      note: editNote,
+      date: editDate,
+      matched_category_ids: editSelectedCategoryIds,
+    };
+    setParsedResults(updated);
+    setEditModalVisible(false);
+    setEditingIndex(null);
   };
 
   // Preset phrase shortcuts
@@ -339,6 +442,20 @@ export default function AiScreen() {
 
               {parsedResults.map((tx, index) => (
                 <View key={index} style={[styles.previewCard, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.divider, paddingBottom: 8 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary }}>
+                      {t('ai.parsed_transaction_item', { index: index + 1 }) || `账单项目 #${index + 1}`}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => handleEditParsedItem(index)}
+                      style={{ flexDirection: 'row', alignItems: 'center', padding: 4 }}
+                    >
+                      <Ionicons name="create-outline" size={16} color={colors.primary} />
+                      <Text style={{ fontSize: 13, color: colors.primary, marginLeft: 4, fontWeight: '600' }}>
+                        {t('common.edit') || '编辑'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                   <View style={styles.previewRow}>
                     <Text style={[styles.previewLabel, { color: colors.textSecondary }]}>
                       {t('common.type')}
@@ -436,6 +553,172 @@ export default function AiScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Edit Transaction Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={editModalVisible}
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <View style={[styles.modalHeader, { borderColor: colors.divider }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                {t('add_tx.title_edit') || '编辑解析账单'}
+              </Text>
+              <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: Spacing.three }}>
+              {/* Type Selector (Toggle) */}
+              <View style={[styles.toggleContainer, { borderColor: colors.divider }]}>
+                <TouchableOpacity
+                  style={[
+                    styles.toggleBtn,
+                    editType === 'expense' && { backgroundColor: colors.primarySurface }
+                  ]}
+                  onPress={() => {
+                    setEditType('expense');
+                    setEditSelectedCategoryIds([]);
+                  }}
+                >
+                  <Text style={[styles.toggleText, { color: editType === 'expense' ? colors.primary : colors.text }]}>
+                    {t('add_tx.type_expense')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.toggleBtn,
+                    editType === 'income' && { backgroundColor: colors.primarySurface }
+                  ]}
+                  onPress={() => {
+                    setEditType('income');
+                    setEditSelectedCategoryIds([]);
+                  }}
+                >
+                  <Text style={[styles.toggleText, { color: editType === 'income' ? colors.primary : colors.text }]}>
+                    {t('add_tx.type_income')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Amount */}
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('common.amount')}</Text>
+              <View style={[styles.amountInputContainer, { borderColor: colors.divider, backgroundColor: colors.surfaceElevated }]}>
+                <Text style={{ fontSize: 18, color: colors.text, marginRight: 8 }}>{currencySymbol}</Text>
+                <TextInput
+                  value={editAmount}
+                  onChangeText={setEditAmount}
+                  keyboardType="decimal-pad"
+                  placeholder="0.00"
+                  placeholderTextColor={colors.textSecondary}
+                  style={{ color: colors.text, flex: 1, height: '100%', fontSize: 15 }}
+                />
+              </View>
+
+              {/* Note */}
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('common.note')}</Text>
+              <TextInput
+                value={editNote}
+                onChangeText={setEditNote}
+                placeholder={t('add_tx.note_placeholder') || '添加备注...'}
+                placeholderTextColor={colors.textSecondary}
+                style={[styles.modalInput, { color: colors.text, borderColor: colors.divider, backgroundColor: colors.surfaceElevated }]}
+              />
+
+              {/* Date */}
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('common.date')}</Text>
+              <TextInput
+                value={editDate}
+                onChangeText={setEditDate}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor={colors.textSecondary}
+                style={[styles.modalInput, { color: colors.text, borderColor: colors.divider, backgroundColor: colors.surfaceElevated }]}
+              />
+
+              {/* Category Chooser */}
+              <Text style={[styles.inputLabel, { color: colors.textSecondary, marginBottom: 8 }]}>
+                {t('add_tx.select_categories')}
+              </Text>
+              
+              {getGroupedEditCategories().map((group) => (
+                <View key={group.parent.id} style={styles.modalGroupContainer}>
+                  {group.parent.id !== -99 && (
+                    <Text style={[styles.modalGroupTitle, { color: colors.text }]}>
+                      {t(group.parent.name_key)}
+                    </Text>
+                  )}
+                  <View style={styles.modalChipsContainer}>
+                    {group.children.map((cat) => {
+                      const isSelected = editSelectedCategoryIds.includes(cat.id);
+                      const labelName = cat.is_custom === 1 ? cat.name_key : t(cat.name_key);
+                      const chipColor = cat.color || '#9E9E9E';
+                      
+                      let chipBg = 'transparent';
+                      let chipBorder = chipColor;
+                      
+                      if (isSelected) {
+                        chipBg = chipColor;
+                        chipBorder = chipColor;
+                      } else {
+                        if (!isDark) {
+                          chipBg = chipColor + '12';
+                          chipBorder = chipColor;
+                        } else {
+                          chipBg = 'transparent';
+                          chipBorder = chipColor;
+                        }
+                      }
+
+                      return (
+                        <TouchableOpacity
+                          key={cat.id}
+                          style={[
+                            styles.modalChip,
+                            {
+                              backgroundColor: chipBg,
+                              borderColor: chipBorder,
+                            },
+                          ]}
+                          onPress={() => handleToggleEditCategory(cat.id)}
+                        >
+                          <Ionicons
+                            name={cat.icon as any}
+                            size={14}
+                            color={isSelected ? '#FFFFFF' : chipColor}
+                            style={{ marginRight: 4 }}
+                          />
+                          <Text
+                            style={{
+                              fontSize: 12,
+                              color: isSelected ? '#FFFFFF' : colors.text,
+                              fontWeight: isSelected ? '600' : 'normal',
+                            }}
+                          >
+                            {labelName}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              ))}
+
+              <TouchableOpacity
+                style={[styles.saveBtn, { backgroundColor: colors.primary }]}
+                onPress={handleSaveEditItem}
+              >
+                <Text style={{ color: colors.textOnPrimary, fontWeight: '700' }}>
+                  {t('common.confirm') || '确认'}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -609,5 +892,99 @@ const styles = StyleSheet.create({
   },
   editBtn: {
     borderWidth: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: BorderRadius.lg,
+    borderTopRightRadius: BorderRadius.lg,
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.three,
+    paddingBottom: Spacing.six,
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: Spacing.three,
+    borderBottomWidth: 1,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: Spacing.four,
+    marginBottom: Spacing.two,
+    textTransform: 'uppercase',
+  },
+  modalInput: {
+    height: 44,
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.three,
+    fontSize: 15,
+    marginBottom: Spacing.two,
+  },
+  amountInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.three,
+    height: 44,
+    marginBottom: Spacing.two,
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+    marginBottom: Spacing.two,
+  },
+  toggleBtn: {
+    flex: 1,
+    height: 42,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  toggleText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  modalGroupContainer: {
+    marginBottom: Spacing.three,
+  },
+  modalGroupTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: Spacing.two,
+  },
+  modalChipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+  },
+  modalChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+  },
+  saveBtn: {
+    height: 48,
+    borderRadius: BorderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: Spacing.five,
+    marginBottom: Spacing.four,
   },
 });

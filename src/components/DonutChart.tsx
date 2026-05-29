@@ -17,16 +17,32 @@ interface DonutChartProps {
   data: DonutChartItem[];
   total: number;
   currencySymbol: string;
+  selectedKey?: string | null;
+  onSelectKey?: (key: string | null) => void;
+  size?: number;
 }
 
-export const DonutChart: React.FC<DonutChartProps> = ({ data, total, currencySymbol }) => {
+export const DonutChart: React.FC<DonutChartProps> = ({
+  data,
+  total,
+  currencySymbol,
+  selectedKey = null,
+  onSelectKey,
+  size = 180,
+}) => {
   const { t } = useTranslation();
   const colors = useThemeColors();
 
-  const size = 180;
-  const strokeWidth = 24;
+  const strokeWidth = size * 0.133; // Keep proportional to size
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
+
+  const translateCategoryName = (nameKey: string) => {
+    return nameKey.startsWith('category.') ? t(nameKey) : nameKey;
+  };
+
+  // Find selected item details if any
+  const selectedItem = data.find((item) => item.key === selectedKey);
 
   // If no data, render a gray circle
   if (total === 0 || data.length === 0) {
@@ -44,11 +60,11 @@ export const DonutChart: React.FC<DonutChartProps> = ({ data, total, currencySym
             />
           </G>
         </Svg>
-        <View style={styles.centerLabel}>
-          <Text style={[styles.centerTotal, { color: colors.text }]}>
+        <View style={[styles.centerLabel, { width: size * 0.7, height: size * 0.7 }]}>
+          <Text style={[styles.centerTotal, { color: colors.text, fontSize: size * 0.09 }]}>
             {currencySymbol}0.00
           </Text>
-          <Text style={[styles.centerSub, { color: colors.textSecondary }]}>
+          <Text style={[styles.centerSub, { color: colors.textSecondary, fontSize: size * 0.06 }]}>
             {t('stats.no_data')}
           </Text>
         </View>
@@ -69,6 +85,10 @@ export const DonutChart: React.FC<DonutChartProps> = ({ data, total, currencySym
             
             accumulatedPercentage += percentage;
 
+            const isSelected = selectedKey === item.key;
+            const isAnySelected = selectedKey !== null;
+            const strokeOpacity = !isAnySelected || isSelected ? 1 : 0.35;
+
             return (
               <Circle
                 key={item.key || index}
@@ -80,18 +100,24 @@ export const DonutChart: React.FC<DonutChartProps> = ({ data, total, currencySym
                 fill="transparent"
                 strokeDasharray={`${strokeLength} ${circumference}`}
                 transform={`rotate(${rotationOffset} ${size / 2} ${size / 2})`}
+                opacity={strokeOpacity}
+                onPress={() => onSelectKey?.(isSelected ? null : item.key)}
               />
             );
           })}
         </G>
       </Svg>
 
-      <View style={styles.centerLabel}>
-        <Text style={[styles.centerTotal, { color: colors.text }]}>
-          {currencySymbol}{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      <View style={[styles.centerLabel, { width: size * 0.7, height: size * 0.7 }]}>
+        <Text style={[styles.centerTotal, { color: colors.text, fontSize: selectedItem ? size * 0.09 : size * 0.09 }]}>
+          {selectedItem
+            ? `${currencySymbol}${selectedItem.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            : `${currencySymbol}${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
         </Text>
-        <Text style={[styles.centerSub, { color: colors.textSecondary }]}>
-          {t('stats.total_expense')}
+        <Text style={[styles.centerSub, { color: colors.textSecondary, fontSize: size * 0.058 }]} numberOfLines={2}>
+          {selectedItem
+            ? `${translateCategoryName(selectedItem.name)}\n(${selectedItem.percentage.toFixed(1)}%)`
+            : t('stats.total_expense')}
         </Text>
       </View>
     </View>

@@ -98,14 +98,16 @@ function MobileTabContainer() {
             size={22}
             color={activeTab === 0 ? colors.tabIconSelected : colors.tabIconDefault}
           />
-          <Text
-            style={[
-              styles.tabLabel,
-              { color: activeTab === 0 ? colors.tabIconSelected : colors.tabIconDefault },
-            ]}
-          >
-            {t('home.title')}
-          </Text>
+          {activeTab === 0 && (
+            <Text
+              style={[
+                styles.tabLabel,
+                { color: colors.tabIconSelected },
+              ]}
+            >
+              {t('home.title')}
+            </Text>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.tabItem} onPress={() => handleTabPress(1)}>
@@ -114,14 +116,16 @@ function MobileTabContainer() {
             size={22}
             color={activeTab === 1 ? colors.tabIconSelected : colors.tabIconDefault}
           />
-          <Text
-            style={[
-              styles.tabLabel,
-              { color: activeTab === 1 ? colors.tabIconSelected : colors.tabIconDefault },
-            ]}
-          >
-            {t('stats.title')}
-          </Text>
+          {activeTab === 1 && (
+            <Text
+              style={[
+                styles.tabLabel,
+                { color: colors.tabIconSelected },
+              ]}
+            >
+              {t('stats.title')}
+            </Text>
+          )}
         </TouchableOpacity>
 
         {/* Central Add FAB */}
@@ -143,14 +147,16 @@ function MobileTabContainer() {
             size={22}
             color={activeTab === 2 ? colors.tabIconSelected : colors.tabIconDefault}
           />
-          <Text
-            style={[
-              styles.tabLabel,
-              { color: activeTab === 2 ? colors.tabIconSelected : colors.tabIconDefault },
-            ]}
-          >
-            {t('ledger.title')}
-          </Text>
+          {activeTab === 2 && (
+            <Text
+              style={[
+                styles.tabLabel,
+                { color: colors.tabIconSelected },
+              ]}
+            >
+              {t('ledger.title')}
+            </Text>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.tabItem} onPress={() => handleTabPress(3)}>
@@ -159,14 +165,16 @@ function MobileTabContainer() {
             size={22}
             color={activeTab === 3 ? colors.tabIconSelected : colors.tabIconDefault}
           />
-          <Text
-            style={[
-              styles.tabLabel,
-              { color: activeTab === 3 ? colors.tabIconSelected : colors.tabIconDefault },
-            ]}
-          >
-            {t('settings.title')}
-          </Text>
+          {activeTab === 3 && (
+            <Text
+              style={[
+                styles.tabLabel,
+                { color: colors.tabIconSelected },
+              ]}
+            >
+              {t('settings.title')}
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
     </View>

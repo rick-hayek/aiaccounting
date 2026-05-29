@@ -25,10 +25,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   
   const [language, setLanguage] = useState<string>('en');
   const [defaultCurrency, setDefaultCurrency] = useState<string>('USD');
-  const [aiProvider, setAiProvider] = useState<string>('openai');
-  const [aiApiKey, setAiApiKey] = useState<string>('');
-  const [aiApiUrl, setAiApiUrl] = useState<string>('https://api.openai.com/v1');
-  const [aiModel, setAiModel] = useState<string>('gpt-4o-mini');
+  const [aiProvider, setAiProvider] = useState<string>(process.env.EXPO_PUBLIC_AI_PROVIDER || 'openai');
+  const [aiApiKey, setAiApiKey] = useState<string>(process.env.EXPO_PUBLIC_AI_API_KEY || '');
+  const [aiApiUrl, setAiApiUrl] = useState<string>(process.env.EXPO_PUBLIC_AI_API_URL || 'https://api.openai.com/v1');
+  const [aiModel, setAiModel] = useState<string>(process.env.EXPO_PUBLIC_AI_MODEL || 'gpt-4o-mini');
   const [themeMode, setThemeMode] = useState<string>('system');
   const [themeColor, setThemeColor] = useState<string>('green');
   const [customThemeColor, setCustomThemeColor] = useState<string>('#6366F1');
@@ -110,15 +110,30 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  const isDevMode = __DEV__ || process.env.EXPO_PUBLIC_ENV === 'development';
+  const isAppDefault = aiProvider === 'app_default';
+
+  const resolvedApiUrl = isAppDefault
+    ? (isDevMode ? (process.env.EXPO_PUBLIC_AI_API_URL || '') : '')
+    : aiApiUrl;
+
+  const resolvedModel = isAppDefault
+    ? (isDevMode ? (process.env.EXPO_PUBLIC_AI_MODEL || '') : '')
+    : aiModel;
+
+  const resolvedApiKey = isAppDefault
+    ? (isDevMode ? (process.env.EXPO_PUBLIC_AI_API_KEY || '') : '')
+    : aiApiKey;
+
   return (
     <SettingsContext.Provider
       value={{
         language,
         defaultCurrency,
         aiProvider,
-        aiApiKey,
-        aiApiUrl,
-        aiModel,
+        aiApiKey: resolvedApiKey,
+        aiApiUrl: resolvedApiUrl,
+        aiModel: resolvedModel,
         themeMode,
         themeColor,
         customThemeColor,

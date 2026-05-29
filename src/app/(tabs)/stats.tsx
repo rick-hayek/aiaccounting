@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useTranslation } from 'react-i18next';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useThemeColors } from '@/hooks/useThemeColors';
@@ -42,6 +42,12 @@ export default function StatsScreen({ isActive }: StatsScreenProps) {
   const [categorySpending, setCategorySpending] = useState<CategorySpending[]>([]);
   const [trendPoints, setTrendPoints] = useState<TrendChartPoint[]>([]);
   const [previousTotal, setPreviousTotal] = useState(0);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+
+  // Reset selected key on period change
+  useEffect(() => {
+    setSelectedKey(null);
+  }, [period]);
 
   // Custom date selection states
   const [customStartDate, setCustomStartDate] = useState<string>(() => {
@@ -462,42 +468,80 @@ export default function StatsScreen({ isActive }: StatsScreenProps) {
 
 
           {/* Donut Chart (Category Breakdown Ratio) */}
-          <View style={[styles.chartContainer, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text, alignSelf: 'flex-start', marginBottom: Spacing.two }]}>
-              {t('stats.category_breakdown')}
-            </Text>
-            <DonutChart
-              data={donutData}
-              total={totalExpense}
-              currencySymbol={currencySymbol}
-            />
-          </View>
-
-          {/* Category List Details */}
-          {donutData.length > 0 && (
-            <View style={[styles.breakdownCard, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          {donutData.length === 0 ? (
+            <View style={[styles.chartContainer, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
+              <Text style={[styles.sectionTitle, { color: colors.text, alignSelf: 'flex-start', marginBottom: Spacing.two }]}>
                 {t('stats.category_breakdown')}
               </Text>
-              {donutData.map((item, index) => (
-                <View key={item.key} style={styles.breakdownRow}>
-                  <View style={styles.breakdownLeft}>
-                    <View style={[styles.colorDot, { backgroundColor: item.color }]} />
-                    <Text style={[styles.breakdownName, { color: colors.text }]}>
-                      {translateCategoryName(item.name)}
-                    </Text>
-                  </View>
-                  <View style={styles.breakdownRight}>
-                    <Text style={[styles.breakdownPercent, { color: colors.textSecondary }]}>
-                      {item.percentage.toFixed(1)}%
-                    </Text>
-                    <Text style={[styles.breakdownAmount, { color: colors.text }]}>
-                      {currencySymbol}
-                      {item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </Text>
-                  </View>
+              <DonutChart
+                data={[]}
+                total={0}
+                currencySymbol={currencySymbol}
+                size={140}
+              />
+            </View>
+          ) : (
+            <View style={[styles.breakdownCard, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
+              <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: Spacing.three }]}>
+                {t('stats.category_breakdown')}
+              </Text>
+              
+              <View style={styles.rowLayout}>
+                <View style={styles.chartCol}>
+                  <DonutChart
+                    data={donutData}
+                    total={totalExpense}
+                    currencySymbol={currencySymbol}
+                    size={140}
+                    selectedKey={selectedKey}
+                    onSelectKey={setSelectedKey}
+                  />
                 </View>
-              ))}
+                
+                <View style={styles.legendCol}>
+                  {donutData.slice(0, 5).map((item) => {
+                    const isSelected = selectedKey === item.key;
+                    return (
+                      <TouchableOpacity
+                        key={item.key}
+                        style={[
+                          styles.legendRow,
+                          isSelected && { backgroundColor: `${colors.primary}15`, borderRadius: BorderRadius.sm }
+                        ]}
+                        onPress={() => setSelectedKey(isSelected ? null : item.key)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.legendLeft}>
+                          <View style={[styles.colorDot, { backgroundColor: item.color }]} />
+                          <Text style={[styles.legendName, { color: colors.text }]} numberOfLines={1}>
+                            {translateCategoryName(item.name)}
+                          </Text>
+                        </View>
+                        <Text style={[styles.legendValue, { color: colors.text }]} numberOfLines={1}>
+                          {item.percentage.toFixed(0)}%
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.viewAllBtn, { borderTopColor: colors.divider }]}
+                onPress={() => {
+                  const { startDate, endDate } = getDateRange(period);
+                  router.push({
+                    pathname: '/categories_breakdown',
+                    params: { startDate, endDate, period }
+                  } as any);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.viewAllText, { color: colors.primary }]}>
+                  {t('settings.view_all_categories') || '查看所有分类支出明细'}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+              </TouchableOpacity>
             </View>
           )}
 
@@ -748,17 +792,34 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: Spacing.three,
   },
-  breakdownRow: {
+  rowLayout: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#F0F0F0',
+    marginBottom: Spacing.two,
   },
-  breakdownLeft: {
+  chartCol: {
+    width: 140,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  legendCol: {
+    flex: 1,
+    marginLeft: Spacing.four,
+    gap: 6,
+  },
+  legendRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+  },
+  legendLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
   },
   colorDot: {
     width: 10,
@@ -766,23 +827,28 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.full,
     marginRight: Spacing.two,
   },
-  breakdownName: {
-    fontSize: 14,
+  legendName: {
+    fontSize: 13,
     fontWeight: '500',
+    flex: 1,
   },
-  breakdownRight: {
+  legendValue: {
+    fontSize: 12,
+    fontWeight: '600',
+    opacity: 0.8,
+  },
+  viewAllBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: Spacing.three,
+    marginTop: Spacing.two,
+    borderTopWidth: 1,
   },
-  breakdownPercent: {
-    fontSize: 13,
-    marginRight: Spacing.three,
-  },
-  breakdownAmount: {
+  viewAllText: {
     fontSize: 14,
     fontWeight: '600',
-    minWidth: 80,
-    textAlign: 'right',
+    marginRight: 4,
   },
   dimensionRow: {
     marginBottom: Spacing.three,
