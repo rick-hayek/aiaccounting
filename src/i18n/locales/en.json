@@ -211,8 +211,8 @@
   "ai": {
     "title": "AI Entry",
     "smart_parse": "✦ Smart Parse",
-    "voice_btn": "Hold to Speak",
-    "voice_recording": "Recording...",
+    "voice_btn": "Tap to speak",
+    "voice_recording": "Recording, tap again to finish and parse...",
     "voice_release": "Release to Finish",
     "text_placeholder": "Describe your transaction in natural language",
     "processing": "AI is analyzing...",

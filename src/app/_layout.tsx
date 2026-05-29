@@ -31,6 +31,7 @@ export default function TabLayout() {
             <Stack.Screen name="import" />
             <Stack.Screen name="export" />
             <Stack.Screen name="edit" />
+            <Stack.Screen name="add" />
             <Stack.Screen name="categories_breakdown" />
           </Stack>
         </AppThemeProvider>

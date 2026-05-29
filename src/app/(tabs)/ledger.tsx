@@ -19,7 +19,6 @@ import { useThemeColors } from '@/hooks/useThemeColors';
 import { useSettings } from '@/context/SettingsContext';
 import { getTransactions, deleteTransaction, Transaction, Category } from '@/database/db';
 import { TransactionItem } from '@/components/TransactionItem';
-import { ManualAddModal } from '@/components/ManualAddModal';
 import { BorderRadius, Spacing } from '@/constants/theme';
 import { getCurrencySymbol } from '@/utils/currency';
 
@@ -57,9 +56,7 @@ export default function LedgerScreen({ isActive }: LedgerScreenProps) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Edit modal state
-  const [editTxId, setEditTxId] = useState<number | null>(null);
-  const [manualModalVisible, setManualModalVisible] = useState(false);
+
 
   const loadData = useCallback(async () => {
     try {
@@ -288,21 +285,6 @@ export default function LedgerScreen({ isActive }: LedgerScreenProps) {
         />
       )}
 
-      {/* Manual Add / Edit Modal */}
-      <ManualAddModal
-        visible={manualModalVisible}
-        onClose={() => {
-          setManualModalVisible(false);
-          setEditTxId(null);
-        }}
-        onSave={() => {
-          setManualModalVisible(false);
-          setEditTxId(null);
-          loadData();
-        }}
-        defaultCurrency={defaultCurrency || 'CNY'}
-        editTransactionId={editTxId}
-      />
     </SafeAreaView>
   );
 }

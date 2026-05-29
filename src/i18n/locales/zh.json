@@ -211,8 +211,8 @@
   "ai": {
     "title": "AI 记账",
     "smart_parse": "✦ 智能解析",
-    "voice_btn": "按住 说话",
-    "voice_recording": "正在录音...",
+    "voice_btn": "点击开始语音输入",
+    "voice_recording": "正在录音，再次点击结束并解析...",
     "voice_release": "松开 结束",
     "text_placeholder": "用自然语言描述这笔账",
     "processing": "AI 正在识别中...",

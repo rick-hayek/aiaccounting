@@ -13,6 +13,7 @@ import {
   Platform,
   Switch,
   useColorScheme,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -426,204 +427,207 @@ export default function SettingsScreen({ isActive }: SettingsScreenProps) {
 
       {/* --- AI Config Bottom Sheet Modal --- */}
       <Modal animationType="slide" transparent={true} visible={aiModalVisible} onRequestClose={() => setAiModalVisible(false)}>
-        <Pressable style={styles.modalOverlay} onPress={() => setAiModalVisible(false)}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={{ width: '100%', justifyContent: 'flex-end' }}
-          >
-            <Pressable style={[styles.modalContent, { backgroundColor: colors.surface }]} onPress={() => {}}>
-              <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>{t('settings.ai_config')}</Text>
-                <TouchableOpacity onPress={() => setAiModalVisible(false)}>
-                  <Ionicons name="close" size={24} color={colors.textSecondary} />
-                </TouchableOpacity>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setAiModalVisible(false)} />
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>{t('settings.ai_config')}</Text>
+              <TouchableOpacity onPress={() => setAiModalVisible(false)}>
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Spacing.five }}>
+              {/* Provider Selection */}
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('settings.ai_provider')}</Text>
+              <View style={styles.optionContainerSmall}>
+                {['app_default', 'openai', 'deepseek', 'custom'].map((prov) => {
+                  const isSel = tempProvider === prov;
+                  return (
+                    <TouchableOpacity
+                      key={prov}
+                      style={[
+                        styles.optionBtn,
+                        isSel
+                          ? { backgroundColor: colors.primary, borderColor: colors.primary }
+                          : { backgroundColor: colors.surfaceElevated, borderColor: colors.divider },
+                      ]}
+                      onPress={() => {
+                        setTempProvider(prov);
+                        if (prov === 'openai') {
+                          setTempApiUrl('https://api.openai.com/v1');
+                          setTempModel('gpt-4o-mini');
+                          setTempApiKey(aiProvider === 'openai' ? aiApiKey : '');
+                        } else if (prov === 'deepseek') {
+                          setTempApiUrl('https://api.deepseek.com/v1');
+                          setTempModel('deepseek-chat');
+                          setTempApiKey(aiProvider === 'deepseek' ? aiApiKey : '');
+                        } else if (prov === 'app_default') {
+                          const isDev = __DEV__ || process.env.EXPO_PUBLIC_ENV === 'development';
+                          setTempApiUrl(isDev ? (process.env.EXPO_PUBLIC_AI_API_URL || '') : '');
+                          setTempModel(isDev ? (process.env.EXPO_PUBLIC_AI_MODEL || '') : '');
+                          setTempApiKey(isDev ? (process.env.EXPO_PUBLIC_AI_API_KEY || '') : '');
+                        } else if (prov === 'custom') {
+                          setTempApiUrl(aiProvider === 'custom' ? aiApiUrl : '');
+                          setTempModel(aiProvider === 'custom' ? aiModel : '');
+                          setTempApiKey(aiProvider === 'custom' ? aiApiKey : '');
+                        }
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.optionText,
+                          {
+                            color: isSel ? colors.textOnPrimary : colors.text,
+                            textTransform: prov === 'app_default' ? 'none' : 'capitalize',
+                          },
+                        ]}
+                      >
+                        {prov === 'app_default' ? t('settings.ai_provider_app_default') : prov}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Provider Selection */}
-                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('settings.ai_provider')}</Text>
-                <View style={styles.optionContainerSmall}>
-                  {['app_default', 'openai', 'deepseek', 'custom'].map((prov) => {
-                    const isSel = tempProvider === prov;
-                    return (
-                      <TouchableOpacity
-                        key={prov}
-                        style={[
-                          styles.optionBtn,
-                          isSel
-                            ? { backgroundColor: colors.primary, borderColor: colors.primary }
-                            : { backgroundColor: colors.surfaceElevated, borderColor: colors.divider },
-                        ]}
-                        onPress={() => {
-                          setTempProvider(prov);
-                          if (prov === 'openai') {
-                            setTempApiUrl('https://api.openai.com/v1');
-                            setTempModel('gpt-4o-mini');
-                            setTempApiKey(aiProvider === 'openai' ? aiApiKey : '');
-                          } else if (prov === 'deepseek') {
-                            setTempApiUrl('https://api.deepseek.com/v1');
-                            setTempModel('deepseek-chat');
-                            setTempApiKey(aiProvider === 'deepseek' ? aiApiKey : '');
-                          } else if (prov === 'app_default') {
-                            const isDev = __DEV__ || process.env.EXPO_PUBLIC_ENV === 'development';
-                            setTempApiUrl(isDev ? (process.env.EXPO_PUBLIC_AI_API_URL || '') : '');
-                            setTempModel(isDev ? (process.env.EXPO_PUBLIC_AI_MODEL || '') : '');
-                            setTempApiKey(isDev ? (process.env.EXPO_PUBLIC_AI_API_KEY || '') : '');
-                          } else if (prov === 'custom') {
-                            setTempApiUrl(aiProvider === 'custom' ? aiApiUrl : '');
-                            setTempModel(aiProvider === 'custom' ? aiModel : '');
-                            setTempApiKey(aiProvider === 'custom' ? aiApiKey : '');
-                          }
-                        }}
-                      >
-                        <Text
-                          style={[
-                            styles.optionText,
-                            {
-                              color: isSel ? colors.textOnPrimary : colors.text,
-                              textTransform: prov === 'app_default' ? 'none' : 'capitalize',
-                            },
-                          ]}
-                        >
-                          {prov === 'app_default' ? t('settings.ai_provider_app_default') : prov}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-
-                {/* Info banner for app_default */}
-                {tempProvider === 'app_default' && (
-                  <View
-                    style={[
-                      styles.infoBanner,
-                      {
-                        backgroundColor: (__DEV__ || process.env.EXPO_PUBLIC_ENV === 'development') ? `${colors.primary}15` : '#FF980015',
-                        borderColor: (__DEV__ || process.env.EXPO_PUBLIC_ENV === 'development') ? colors.primary : '#FF9800',
-                      },
-                    ]}
-                  >
-                    <Ionicons
-                      name={(__DEV__ || process.env.EXPO_PUBLIC_ENV === 'development') ? 'information-circle-outline' : 'warning-outline'}
-                      size={20}
-                      color={(__DEV__ || process.env.EXPO_PUBLIC_ENV === 'development') ? colors.primary : '#FF9800'}
-                      style={{ marginRight: 8, marginTop: 2 }}
-                    />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.infoBannerText, { color: (__DEV__ || process.env.EXPO_PUBLIC_ENV === 'development') ? colors.text : '#E65100' }]}>
-                        {(__DEV__ || process.env.EXPO_PUBLIC_ENV === 'development')
-                          ? t('settings.ai_provider_app_default_dev_desc')
-                          : t('settings.ai_provider_app_default_prod_desc')}
-                      </Text>
-                      {!(__DEV__ || process.env.EXPO_PUBLIC_ENV === 'development') && (
-                        <Text style={{ color: '#E65100', marginTop: 4, fontSize: 12, lineHeight: 16 }}>
-                          {t('settings.ai_provider_app_default_prod_coming_soon')}
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-                )}
-
-                {/* API Inputs - hidden for app_default */}
-                {tempProvider !== 'app_default' && (
-                  <>
-                    {/* API Key */}
-                    <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('settings.ai_key')}</Text>
-                    <TextInput
-                      secureTextEntry
-                      value={tempApiKey}
-                      onChangeText={setTempApiKey}
-                      placeholder={t('settings.placeholder_key')}
-                      placeholderTextColor={colors.textSecondary}
-                      editable={tempProvider !== 'app_default'}
-                      style={[
-                        styles.input,
-                        {
-                          color: colors.text,
-                          borderColor: colors.divider,
-                          backgroundColor: colors.surfaceElevated,
-                          opacity: tempProvider === 'app_default' ? 0.6 : 1,
-                        },
-                      ]}
-                    />
-
-                    {/* Base URL */}
-                    <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('settings.ai_url')}</Text>
-                    <TextInput
-                      value={tempApiUrl}
-                      onChangeText={setTempApiUrl}
-                      placeholder={t('settings.placeholder_url')}
-                      placeholderTextColor={colors.textSecondary}
-                      editable={tempProvider !== 'app_default'}
-                      style={[
-                        styles.input,
-                        {
-                          color: colors.text,
-                          borderColor: colors.divider,
-                          backgroundColor: colors.surfaceElevated,
-                          opacity: tempProvider === 'app_default' ? 0.6 : 1,
-                        },
-                      ]}
-                    />
-
-                    {/* Model */}
-                    <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('settings.ai_model')}</Text>
-                    <TextInput
-                      value={tempModel}
-                      onChangeText={setTempModel}
-                      placeholder="Model Name"
-                      placeholderTextColor={colors.textSecondary}
-                      editable={tempProvider !== 'app_default'}
-                      style={[
-                        styles.input,
-                        {
-                          color: colors.text,
-                          borderColor: colors.divider,
-                          backgroundColor: colors.surfaceElevated,
-                          opacity: tempProvider === 'app_default' ? 0.6 : 1,
-                        },
-                      ]}
-                    />
-                  </>
-                )}
-
-                <TouchableOpacity
+              {/* Info banner for app_default */}
+              {tempProvider === 'app_default' && (
+                <View
                   style={[
-                    styles.primaryBtn,
+                    styles.infoBanner,
                     {
-                      backgroundColor: (tempProvider === 'app_default' && !(__DEV__ || process.env.EXPO_PUBLIC_ENV === 'development'))
-                        ? colors.divider
-                        : colors.primary,
+                      backgroundColor: (__DEV__ || process.env.EXPO_PUBLIC_ENV === 'development') ? `${colors.primary}15` : '#FF980015',
+                      borderColor: (__DEV__ || process.env.EXPO_PUBLIC_ENV === 'development') ? colors.primary : '#FF9800',
                     },
                   ]}
-                  onPress={handleSaveAiSettings}
-                  disabled={tempProvider === 'app_default' && !(__DEV__ || process.env.EXPO_PUBLIC_ENV === 'development')}
                 >
-                  <Text
+                  <Ionicons
+                    name={(__DEV__ || process.env.EXPO_PUBLIC_ENV === 'development') ? 'information-circle-outline' : 'warning-outline'}
+                    size={20}
+                    color={(__DEV__ || process.env.EXPO_PUBLIC_ENV === 'development') ? colors.primary : '#FF9800'}
+                    style={{ marginRight: 8, marginTop: 2 }}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.infoBannerText, { color: (__DEV__ || process.env.EXPO_PUBLIC_ENV === 'development') ? colors.text : '#E65100' }]}>
+                      {(__DEV__ || process.env.EXPO_PUBLIC_ENV === 'development')
+                        ? t('settings.ai_provider_app_default_dev_desc')
+                        : t('settings.ai_provider_app_default_prod_desc')}
+                    </Text>
+                    {!(__DEV__ || process.env.EXPO_PUBLIC_ENV === 'development') && (
+                      <Text style={{ color: '#E65100', marginTop: 4, fontSize: 12, lineHeight: 16 }}>
+                        {t('settings.ai_provider_app_default_prod_coming_soon')}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              )}
+
+              {/* API Inputs - hidden for app_default */}
+              {tempProvider !== 'app_default' && (
+                <>
+                  {/* API Key */}
+                  <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('settings.ai_key')}</Text>
+                  <TextInput
+                    secureTextEntry
+                    value={tempApiKey}
+                    onChangeText={setTempApiKey}
+                    placeholder={t('settings.placeholder_key')}
+                    placeholderTextColor={colors.textSecondary}
+                    editable={tempProvider !== 'app_default'}
                     style={[
-                      styles.primaryBtnText,
+                      styles.input,
                       {
-                        color: (tempProvider === 'app_default' && !(__DEV__ || process.env.EXPO_PUBLIC_ENV === 'development'))
-                          ? colors.textSecondary
-                          : colors.textOnPrimary,
+                        color: colors.text,
+                        borderColor: colors.divider,
+                        backgroundColor: colors.surfaceElevated,
+                        opacity: tempProvider === 'app_default' ? 0.6 : 1,
                       },
                     ]}
-                  >
-                    {(tempProvider === 'app_default' && !(__DEV__ || process.env.EXPO_PUBLIC_ENV === 'development'))
-                      ? t('settings.ai_provider_app_default') + ' (Coming Soon)'
-                      : t('settings.save_settings')}
-                  </Text>
-                </TouchableOpacity>
-              </ScrollView>
-            </Pressable>
-          </KeyboardAvoidingView>
-        </Pressable>
+                  />
+
+                  {/* Base URL */}
+                  <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('settings.ai_url')}</Text>
+                  <TextInput
+                    value={tempApiUrl}
+                    onChangeText={setTempApiUrl}
+                    placeholder={t('settings.placeholder_url')}
+                    placeholderTextColor={colors.textSecondary}
+                    editable={tempProvider !== 'app_default'}
+                    style={[
+                      styles.input,
+                      {
+                        color: colors.text,
+                        borderColor: colors.divider,
+                        backgroundColor: colors.surfaceElevated,
+                        opacity: tempProvider === 'app_default' ? 0.6 : 1,
+                      },
+                    ]}
+                  />
+
+                  {/* Model */}
+                  <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('settings.ai_model')}</Text>
+                  <TextInput
+                    value={tempModel}
+                    onChangeText={setTempModel}
+                    placeholder="Model Name"
+                    placeholderTextColor={colors.textSecondary}
+                    editable={tempProvider !== 'app_default'}
+                    style={[
+                      styles.input,
+                      {
+                        color: colors.text,
+                        borderColor: colors.divider,
+                        backgroundColor: colors.surfaceElevated,
+                        opacity: tempProvider === 'app_default' ? 0.6 : 1,
+                      },
+                    ]}
+                  />
+                </>
+              )}
+
+              <TouchableOpacity
+                style={[
+                  styles.primaryBtn,
+                  {
+                    backgroundColor: (tempProvider === 'app_default' && !(__DEV__ || process.env.EXPO_PUBLIC_ENV === 'development'))
+                      ? colors.divider
+                      : colors.primary,
+                  },
+                ]}
+                onPress={handleSaveAiSettings}
+                disabled={tempProvider === 'app_default' && !(__DEV__ || process.env.EXPO_PUBLIC_ENV === 'development')}
+              >
+                <Text
+                  style={[
+                    styles.primaryBtnText,
+                    {
+                      color: (tempProvider === 'app_default' && !(__DEV__ || process.env.EXPO_PUBLIC_ENV === 'development'))
+                        ? colors.textSecondary
+                        : colors.textOnPrimary,
+                    },
+                  ]}
+                >
+                  {(tempProvider === 'app_default' && !(__DEV__ || process.env.EXPO_PUBLIC_ENV === 'development'))
+                    ? t('settings.ai_provider_app_default') + ' (Coming Soon)'
+                    : t('settings.save_settings')}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* --- Theme Color Bottom Sheet Modal --- */}
       <Modal animationType="slide" transparent={true} visible={themeColorModalVisible} onRequestClose={() => setThemeColorModalVisible(false)}>
-        <Pressable style={styles.modalOverlay} onPress={() => setThemeColorModalVisible(false)}>
-          <Pressable style={[styles.modalContent, { backgroundColor: colors.surface }]} onPress={() => {}}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setThemeColorModalVisible(false)} />
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>{t('settings.theme_color')}</Text>
               <TouchableOpacity onPress={() => setThemeColorModalVisible(false)}>
@@ -631,250 +635,249 @@ export default function SettingsScreen({ isActive }: SettingsScreenProps) {
               </TouchableOpacity>
             </View>
 
-            <View style={{ paddingVertical: Spacing.two }}>
-               {[
-                { key: 'green', label: t('settings.grass_green'), color: '#66AA22' },
-                { key: 'sage', label: t('settings.sage_green'), color: '#527954' },
-                { key: 'blue', label: t('settings.slate_blue'), color: '#4A6D8C' },
-                { key: 'skyblue', label: t('settings.sky_blue'), color: '#70C4FF' },
-                { key: 'gold', label: t('settings.sand_gold'), color: '#8C7355' },
-                { key: 'black', label: t('settings.charcoal_black'), color: '#1A1A1A' },
-                { key: 'red', label: t('settings.berry_red'), color: '#B34766' },
-                { key: 'purple', label: t('settings.aurora_purple'), color: '#6366F1' },
-                { key: 'custom', label: t('settings.custom_theme') || '自定义色', color: customThemeColor },
-              ].map((themeOpt) => {
-                const isSelected = themeColor === themeOpt.key;
-                return (
-                  <TouchableOpacity
-                    key={themeOpt.key}
-                    style={[
-                      styles.themeOptionRow,
-                      { borderColor: colors.divider }
-                    ]}
-                    onPress={async () => {
-                      await updateAppSetting('theme_color', themeOpt.key);
-                      if (themeOpt.key !== 'custom') {
-                        setThemeColorModalVisible(false);
-                      }
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <View
-                        style={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: 12,
-                          backgroundColor: themeOpt.color,
-                          marginRight: Spacing.three,
-                          borderWidth: 1.5,
-                          borderColor: colors.divider,
-                        }}
-                      />
-                      <Text style={[styles.themeOptionLabel, { color: colors.text, fontWeight: isSelected ? '600' : '400' }]}>
-                        {themeOpt.label}
-                      </Text>
-                    </View>
-                    {isSelected && (
-                      <Ionicons name="checkmark" size={20} color={colors.primary} />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-
-              {/* Custom Color Input Editor */}
-              {themeColor === 'custom' && (
-                <View style={styles.customColorInputContainer}>
-                  <Text style={[styles.customColorInputLabel, { color: colors.textSecondary }]}>
-                    {t('settings.custom_color_hex') || '自定义色值 (HEX)'}
-                  </Text>
-                  <View style={styles.customColorInputRow}>
-                    <View style={[styles.customColorPreview, { backgroundColor: customThemeColor }]} />
-                    <TextInput
-                      value={customThemeColor}
-                      onChangeText={async (val) => {
-                        if (val.startsWith('#') && val.length <= 7) {
-                          await updateAppSetting('custom_theme_color', val);
-                        } else if (!val.startsWith('#') && val.length <= 6) {
-                          await updateAppSetting('custom_theme_color', '#' + val);
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Spacing.five }}>
+              <View style={{ paddingVertical: Spacing.two }}>
+                 {[
+                  { key: 'green', label: t('settings.grass_green'), color: '#66AA22' },
+                  { key: 'sage', label: t('settings.sage_green'), color: '#527954' },
+                  { key: 'blue', label: t('settings.slate_blue'), color: '#4A6D8C' },
+                  { key: 'skyblue', label: t('settings.sky_blue'), color: '#70C4FF' },
+                  { key: 'gold', label: t('settings.sand_gold'), color: '#8C7355' },
+                  { key: 'black', label: t('settings.charcoal_black'), color: '#1A1A1A' },
+                  { key: 'red', label: t('settings.berry_red'), color: '#B34766' },
+                  { key: 'purple', label: t('settings.aurora_purple'), color: '#6366F1' },
+                  { key: 'custom', label: t('settings.custom_theme') || '自定义色', color: customThemeColor },
+                ].map((themeOpt) => {
+                  const isSelected = themeColor === themeOpt.key;
+                  return (
+                    <TouchableOpacity
+                      key={themeOpt.key}
+                      style={[
+                        styles.themeOptionRow,
+                        { borderColor: colors.divider }
+                      ]}
+                      onPress={async () => {
+                        await updateAppSetting('theme_color', themeOpt.key);
+                        if (themeOpt.key !== 'custom') {
+                          setThemeColorModalVisible(false);
                         }
                       }}
-                      placeholder="#6366F1"
-                      placeholderTextColor={colors.textSecondary}
-                      style={[styles.customColorInput, { color: colors.text, borderColor: colors.divider }]}
-                      maxLength={7}
-                      autoCapitalize="characters"
-                    />
-                  </View>
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <View
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 12,
+                            backgroundColor: themeOpt.color,
+                            marginRight: Spacing.three,
+                            borderWidth: 1.5,
+                            borderColor: colors.divider,
+                          }}
+                        />
+                        <Text style={[styles.themeOptionLabel, { color: colors.text, fontWeight: isSelected ? '600' : '400' }]}>
+                          {themeOpt.label}
+                        </Text>
+                      </View>
+                      {isSelected && (
+                        <Ionicons name="checkmark" size={20} color={colors.primary} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
 
-                  <View style={styles.swatchesRow}>
-                    {['#FF5722', '#E91E63', '#9C27B0', '#3F51B5', '#03A9F4', '#009688', '#FFC107', '#E040FB'].map((swatch) => (
-                      <TouchableOpacity
-                        key={swatch}
-                        style={[styles.swatchCircle, { backgroundColor: swatch }]}
-                        onPress={async () => {
-                          await updateAppSetting('custom_theme_color', swatch);
+                {/* Custom Color Input Editor */}
+                {themeColor === 'custom' && (
+                  <View style={styles.customColorInputContainer}>
+                    <Text style={[styles.customColorInputLabel, { color: colors.textSecondary }]}>
+                      {t('settings.custom_color_hex') || '自定义色值 (HEX)'}
+                    </Text>
+                    <View style={styles.customColorInputRow}>
+                      <View style={[styles.customColorPreview, { backgroundColor: customThemeColor }]} />
+                      <TextInput
+                        value={customThemeColor}
+                        onChangeText={async (val) => {
+                          if (val.startsWith('#') && val.length <= 7) {
+                            await updateAppSetting('custom_theme_color', val);
+                          } else if (!val.startsWith('#') && val.length <= 6) {
+                            await updateAppSetting('custom_theme_color', '#' + val);
+                          }
                         }}
+                        placeholder="#6366F1"
+                        placeholderTextColor={colors.textSecondary}
+                        style={[styles.customColorInput, { color: colors.text, borderColor: colors.divider }]}
+                        maxLength={7}
+                        autoCapitalize="characters"
                       />
-                    ))}
+                    </View>
+
+                    <View style={styles.swatchesRow}>
+                      {['#FF5722', '#E91E63', '#9C27B0', '#3F51B5', '#03A9F4', '#009688', '#FFC107', '#E040FB'].map((swatch) => (
+                        <TouchableOpacity
+                          key={swatch}
+                          style={[styles.swatchCircle, { backgroundColor: swatch }]}
+                          onPress={async () => {
+                            await updateAppSetting('custom_theme_color', swatch);
+                          }}
+                        />
+                      ))}
+                    </View>
                   </View>
-                </View>
-              )}
-            </View>
-          </Pressable>
-        </Pressable>
+                )}
+              </View>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
-
-
 
       {/* --- Add Category Modal --- */}
       <Modal animationType="slide" transparent={true} visible={catModalVisible} onRequestClose={() => setCatModalVisible(false)}>
-        <Pressable style={styles.modalOverlay} onPress={() => setCatModalVisible(false)}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={{ width: '100%', justifyContent: 'flex-end' }}
-          >
-            <Pressable style={[styles.modalContent, { backgroundColor: colors.surface }]} onPress={() => {}}>
-              <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>{t('settings.add_category')}</Text>
-                <TouchableOpacity onPress={() => setCatModalVisible(false)}>
-                  <Ionicons name="close" size={24} color={colors.textSecondary} />
-                </TouchableOpacity>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setCatModalVisible(false)} />
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>{t('settings.add_category')}</Text>
+              <TouchableOpacity onPress={() => setCatModalVisible(false)}>
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Spacing.five }}>
+              {/* Category Name */}
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('settings.category_name')}</Text>
+              <TextInput
+                value={newCatName}
+                onChangeText={setNewCatName}
+                placeholder="如：猫粮、下午茶"
+                placeholderTextColor={colors.textSecondary}
+                style={[styles.input, { color: colors.text, borderColor: colors.divider, backgroundColor: colors.surfaceElevated }]}
+              />
+
+              {/* Category Type */}
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('settings.category_type')}</Text>
+              <View style={styles.optionContainerSmall}>
+                {(['expense', 'income'] as const).map((type) => {
+                  const isSel = newCatType === type;
+                  return (
+                    <TouchableOpacity
+                      key={type}
+                      style={[
+                        styles.optionBtn,
+                        isSel
+                          ? { backgroundColor: colors.primary, borderColor: colors.primary }
+                          : { backgroundColor: colors.surfaceElevated, borderColor: colors.divider },
+                      ]}
+                      onPress={() => {
+                        setNewCatType(type);
+                        setNewCatParentId(null); // reset parent
+                      }}
+                    >
+                      <Text style={[styles.optionText, { color: isSel ? colors.textOnPrimary : colors.text }]}>
+                        {type === 'expense' ? t('add_tx.type_expense') : t('add_tx.type_income')}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Category Name */}
-                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('settings.category_name')}</Text>
-                <TextInput
-                  value={newCatName}
-                  onChangeText={setNewCatName}
-                  placeholder="如：猫粮、下午茶"
-                  placeholderTextColor={colors.textSecondary}
-                  style={[styles.input, { color: colors.text, borderColor: colors.divider, backgroundColor: colors.surfaceElevated }]}
-                />
-
-                {/* Category Type */}
-                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('settings.category_type')}</Text>
-                <View style={styles.optionContainerSmall}>
-                  {(['expense', 'income'] as const).map((type) => {
-                    const isSel = newCatType === type;
-                    return (
-                      <TouchableOpacity
-                        key={type}
-                        style={[
-                          styles.optionBtn,
-                          isSel
-                            ? { backgroundColor: colors.primary, borderColor: colors.primary }
-                            : { backgroundColor: colors.surfaceElevated, borderColor: colors.divider },
-                        ]}
-                        onPress={() => {
-                          setNewCatType(type);
-                          setNewCatParentId(null); // reset parent
-                        }}
-                      >
-                        <Text style={[styles.optionText, { color: isSel ? colors.textOnPrimary : colors.text }]}>
-                          {type === 'expense' ? t('add_tx.type_expense') : t('add_tx.type_income')}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-
-                {/* Parent Category Choice */}
-                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('settings.category_parent')}</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.parentSlider}>
-                  <TouchableOpacity
-                    style={[
-                      styles.parentSelectBtn,
-                      newCatParentId === null
-                        ? { backgroundColor: colors.primarySurface, borderColor: colors.primary }
-                        : { backgroundColor: colors.surfaceElevated, borderColor: colors.divider },
-                    ]}
-                    onPress={() => setNewCatParentId(null)}
-                  >
-                    <Text style={{ color: newCatParentId === null ? colors.primary : colors.text, fontSize: 13, fontWeight: '500' }}>
-                      None
-                    </Text>
-                  </TouchableOpacity>
-                  {parentCategories.map((p) => {
-                    const isSel = newCatParentId === p.id;
-                    return (
-                      <TouchableOpacity
-                        key={p.id}
-                        style={[
-                          styles.parentSelectBtn,
-                          isSel
-                            ? { backgroundColor: colors.primarySurface, borderColor: colors.primary }
-                            : { backgroundColor: colors.surfaceElevated, borderColor: colors.divider },
-                        ]}
-                        onPress={() => setNewCatParentId(p.id)}
-                      >
-                        <Text style={{ color: isSel ? colors.primary : colors.text, fontSize: 13, fontWeight: '500' }}>
-                          {p.is_custom === 0 ? t(p.name_key) : p.name_key}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-
-                {/* Icon Choice */}
-                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('settings.category_icon')}</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectionSlider}>
-                  {PRESET_ICONS.map((ic) => {
-                    const isSel = newCatIcon === ic;
-                    return (
-                      <TouchableOpacity
-                        key={ic}
-                        style={[
-                          styles.iconCircleItem,
-                          { backgroundColor: colors.surfaceElevated },
-                          isSel && { borderWidth: 2, borderColor: colors.primary },
-                        ]}
-                        onPress={() => setNewCatIcon(ic)}
-                      >
-                        <Ionicons name={ic as any} size={18} color={isSel ? colors.primary : colors.text} />
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-
-                {/* Color Choice */}
-                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('settings.category_color')}</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectionSlider}>
-                  {PRESET_COLORS.map((col) => {
-                    const isSel = newCatColor === col;
-                    return (
-                      <TouchableOpacity
-                        key={col}
-                        style={[
-                          styles.colorCircleItem,
-                          { backgroundColor: col },
-                          isSel && { borderWidth: 3, borderColor: colors.surface },
-                        ]}
-                        onPress={() => setNewCatColor(col)}
-                      />
-                    );
-                  })}
-                </ScrollView>
-
-                {/* Actions */}
-                <View style={styles.modalActions}>
-                  <TouchableOpacity
-                    style={[styles.modalBtn, styles.cancelBtn, { borderColor: colors.divider }]}
-                    onPress={() => setCatModalVisible(false)}
-                  >
-                    <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>{t('common.cancel')}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.modalBtn, { backgroundColor: colors.primary }]}
-                    onPress={handleAddCategory}
-                  >
-                    <Text style={{ color: colors.textOnPrimary, fontWeight: '600' }}>{t('common.confirm')}</Text>
-                  </TouchableOpacity>
-                </View>
+              {/* Parent Category Choice */}
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('settings.category_parent')}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.parentSlider}>
+                <TouchableOpacity
+                  style={[
+                    styles.parentSelectBtn,
+                    newCatParentId === null
+                      ? { backgroundColor: colors.primarySurface, borderColor: colors.primary }
+                      : { backgroundColor: colors.surfaceElevated, borderColor: colors.divider },
+                  ]}
+                  onPress={() => setNewCatParentId(null)}
+                >
+                  <Text style={{ color: newCatParentId === null ? colors.primary : colors.text, fontSize: 13, fontWeight: '500' }}>
+                    None
+                  </Text>
+                </TouchableOpacity>
+                {parentCategories.map((p) => {
+                  const isSel = newCatParentId === p.id;
+                  return (
+                    <TouchableOpacity
+                      key={p.id}
+                      style={[
+                        styles.parentSelectBtn,
+                        isSel
+                          ? { backgroundColor: colors.primarySurface, borderColor: colors.primary }
+                          : { backgroundColor: colors.surfaceElevated, borderColor: colors.divider },
+                      ]}
+                      onPress={() => setNewCatParentId(p.id)}
+                    >
+                      <Text style={{ color: isSel ? colors.primary : colors.text, fontSize: 13, fontWeight: '500' }}>
+                        {p.is_custom === 0 ? t(p.name_key) : p.name_key}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </ScrollView>
-            </Pressable>
-          </KeyboardAvoidingView>
-        </Pressable>
+
+              {/* Icon Choice */}
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('settings.category_icon')}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectionSlider}>
+                {PRESET_ICONS.map((ic) => {
+                  const isSel = newCatIcon === ic;
+                  return (
+                    <TouchableOpacity
+                      key={ic}
+                      style={[
+                        styles.iconCircleItem,
+                        { backgroundColor: colors.surfaceElevated },
+                        isSel && { borderWidth: 2, borderColor: colors.primary },
+                      ]}
+                      onPress={() => setNewCatIcon(ic)}
+                    >
+                      <Ionicons name={ic as any} size={18} color={isSel ? colors.primary : colors.text} />
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              {/* Color Choice */}
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('settings.category_color')}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectionSlider}>
+                {PRESET_COLORS.map((col) => {
+                  const isSel = newCatColor === col;
+                  return (
+                    <TouchableOpacity
+                      key={col}
+                      style={[
+                        styles.colorCircleItem,
+                        { backgroundColor: col },
+                        isSel && { borderWidth: 3, borderColor: colors.surface },
+                      ]}
+                      onPress={() => setNewCatColor(col)}
+                    />
+                  );
+                })}
+              </ScrollView>
+
+              {/* Actions */}
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={[styles.modalBtn, styles.cancelBtn, { borderColor: colors.divider }]}
+                  onPress={() => setCatModalVisible(false)}
+                >
+                  <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>{t('common.cancel')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalBtn, { backgroundColor: colors.primary }]}
+                  onPress={handleAddCategory}
+                >
+                  <Text style={{ color: colors.textOnPrimary, fontWeight: '600' }}>{t('common.confirm')}</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
@@ -974,7 +977,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: BorderRadius.xl,
     padding: Spacing.four,
     paddingBottom: Spacing.five,
-    maxHeight: '85%',
+    height: '85%',
   },
   modalHeader: {
     flexDirection: 'row',

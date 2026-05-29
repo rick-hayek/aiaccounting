@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 
 import { useSettings } from '@/context/SettingsContext';
 import { getCategories, addTransaction, Category } from '@/database/db';
@@ -40,32 +40,42 @@ try {
   console.warn('[AI Accounting] expo-speech-recognition native module is not available in Expo Go.');
 }
 
-interface VoiceInputButtonProps {
-  onResult: (text: string) => void;
+interface SpeechControllerProps {
   isRecording: boolean;
   setIsRecording: (rec: boolean) => void;
   language: string;
-  colors: any;
+  onResult: (text: string) => void;
+  onEnd: () => void;
+  registerMethods: (methods: { start: () => void; stop: () => void }) => void;
   t: any;
 }
 
-const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
-  onResult,
+// 1. Component for Native Speech Recognition (only rendered if isSpeechAvailable === true)
+const NativeSpeechController: React.FC<SpeechControllerProps> = ({
   isRecording,
   setIsRecording,
   language,
-  colors,
+  onResult,
+  onEnd,
+  registerMethods,
   t,
 }) => {
-  if (!isSpeechAvailable || !useSpeechRecognitionEvent) {
-    return null;
-  }
+  const onResultRef = useRef(onResult);
+  const onEndRef = useRef(onEnd);
+
+  useEffect(() => {
+    onResultRef.current = onResult;
+    onEndRef.current = onEnd;
+  }, [onResult, onEnd]);
 
   useSpeechRecognitionEvent('start', () => setIsRecording(true));
-  useSpeechRecognitionEvent('end', () => setIsRecording(false));
+  useSpeechRecognitionEvent('end', () => {
+    setIsRecording(false);
+    onEndRef.current();
+  });
   useSpeechRecognitionEvent('result', (event: any) => {
     const text = event.results[0]?.transcript || '';
-    onResult(text);
+    onResultRef.current(text);
   });
   useSpeechRecognitionEvent('error', (event: any) => {
     console.error('Speech Recognition error', event.error, event.message);
@@ -79,7 +89,8 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
         Alert.alert(t('common.error'), t('ai.stt_error'));
         return;
       }
-      onResult('');
+      onResultRef.current('');
+      setIsRecording(true);
       const sttLanguage = language === 'zh' ? 'zh-CN' : 'en-US';
       ExpoSpeechRecognitionModule.start({
         lang: sttLanguage,
@@ -88,35 +99,182 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
     } catch (e) {
       console.error('Failed to start speech recognition', e);
       Alert.alert(t('common.error'), t('ai.stt_error'));
+      setIsRecording(false);
     }
   };
 
   const stopSpeech = () => {
-    ExpoSpeechRecognitionModule.stop();
+    try {
+      ExpoSpeechRecognitionModule.stop();
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  return (
-    <View style={styles.voiceSection}>
-      <TouchableOpacity
-        activeOpacity={0.8}
-        style={[
-          styles.voiceButton,
-          { backgroundColor: isRecording ? colors.expense : colors.primary },
-        ]}
-        onPressIn={startSpeech}
-        onPressOut={stopSpeech}
-      >
-        <Ionicons
-          name={isRecording ? 'mic' : 'mic-outline'}
-          size={36}
-          color="#FFF"
-        />
-      </TouchableOpacity>
-      <Text style={[styles.voiceLabel, { color: colors.textSecondary }]}>
-        {isRecording ? t('ai.voice_recording') : t('ai.voice_btn')}
-      </Text>
-    </View>
-  );
+  useEffect(() => {
+    registerMethods({ start: startSpeech, stop: stopSpeech });
+  }, [language, registerMethods]);
+
+  return null;
+};
+
+// 2. Component for Web and Simulated Speech Recognition (only rendered if isSpeechAvailable === false)
+const WebAndSimulatedSpeechController: React.FC<SpeechControllerProps> = ({
+  isRecording,
+  setIsRecording,
+  language,
+  onResult,
+  onEnd,
+  registerMethods,
+  t,
+}) => {
+  const onResultRef = useRef(onResult);
+  const onEndRef = useRef(onEnd);
+  const isRecordingRef = useRef(isRecording);
+
+  useEffect(() => {
+    onResultRef.current = onResult;
+    onEndRef.current = onEnd;
+    isRecordingRef.current = isRecording;
+  }, [onResult, onEnd, isRecording]);
+
+  const webRecognitionRef = useRef<any>(null);
+  const simIntervalRef = useRef<any>(null);
+  const simTimeoutRef = useRef<any>(null);
+  const simPhraseRef = useRef<string>('');
+  const simIndexRef = useRef<number>(0);
+
+  useEffect(() => {
+    return () => {
+      if (webRecognitionRef.current) {
+        try {
+          webRecognitionRef.current.abort();
+        } catch (e) {}
+      }
+      if (simIntervalRef.current) clearInterval(simIntervalRef.current);
+      if (simTimeoutRef.current) clearTimeout(simTimeoutRef.current);
+    };
+  }, []);
+
+  const startSpeech = async () => {
+    // Try Web Speech API if on web
+    if (Platform.OS === 'web') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        try {
+          if (webRecognitionRef.current) {
+            webRecognitionRef.current.abort();
+          }
+          const rec = new SpeechRecognition();
+          rec.continuous = false;
+          rec.interimResults = true;
+          rec.lang = language === 'zh' ? 'zh-CN' : 'en-US';
+
+          rec.onstart = () => {
+            setIsRecording(true);
+            onResultRef.current('');
+          };
+          rec.onresult = (event: any) => {
+            const transcript = event.results[0]?.[0]?.transcript || '';
+            onResultRef.current(transcript);
+          };
+          rec.onend = () => {
+            setIsRecording(false);
+            onEndRef.current();
+          };
+          rec.onerror = (event: any) => {
+            console.error('Web Speech error', event.error);
+            setIsRecording(false);
+          };
+          webRecognitionRef.current = rec;
+          rec.start();
+          return;
+        } catch (e) {
+          console.error('Failed to start Web Speech API, falling back to simulator', e);
+        }
+      }
+    }
+
+    // Fallback: Simulator mode
+    console.log('[AI Accounting] Starting simulated speech recognition');
+    setIsRecording(true);
+    onResultRef.current('');
+
+    const phrases = language === 'zh' ? [
+      '昨天花了 10 美元买咖啡',
+      '中午吃麦当劳花了38元',
+      '打车去机场花了120元',
+      '买了一双运动鞋花了599元',
+      '发工资了入账15000元',
+      '超市买水果花了32.5元',
+    ] : [
+      'spent 10 dollars on coffee yesterday',
+      'spent 38 dollars on lunch at McDonald\'s',
+      'took a taxi to the airport for 120 yuan',
+      'bought a pair of sneakers for 599 dollars',
+      'received salary payment of 15000 yuan',
+      'bought some fruits at supermarket for 32.5',
+    ];
+
+    const phrase = phrases[Math.floor(Math.random() * phrases.length)];
+    simPhraseRef.current = phrase;
+    simIndexRef.current = 0;
+
+    if (simIntervalRef.current) clearInterval(simIntervalRef.current);
+    if (simTimeoutRef.current) clearTimeout(simTimeoutRef.current);
+
+    const typingSpeed = language === 'zh' ? 200 : 350;
+    const words = language === 'zh' ? phrase.split('') : phrase.split(' ');
+
+    simIntervalRef.current = setInterval(() => {
+      simIndexRef.current += 1;
+      if (simIndexRef.current <= words.length) {
+        const text = language === 'zh' 
+          ? words.slice(0, simIndexRef.current).join('') 
+          : words.slice(0, simIndexRef.current).join(' ');
+        onResultRef.current(text);
+      } else {
+        clearInterval(simIntervalRef.current);
+      }
+    }, typingSpeed);
+
+    simTimeoutRef.current = setTimeout(() => {
+      stopSpeech();
+    }, 8000);
+  };
+
+  const stopSpeech = () => {
+    if (webRecognitionRef.current) {
+      try {
+        webRecognitionRef.current.stop();
+        return;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    if (simIntervalRef.current) {
+      clearInterval(simIntervalRef.current);
+      simIntervalRef.current = null;
+    }
+    if (simTimeoutRef.current) {
+      clearTimeout(simTimeoutRef.current);
+      simTimeoutRef.current = null;
+    }
+
+    if (isRecordingRef.current) {
+      setIsRecording(false);
+      setTimeout(() => {
+        onEndRef.current();
+      }, 50);
+    }
+  };
+
+  useEffect(() => {
+    registerMethods({ start: startSpeech, stop: stopSpeech });
+  }, [language, registerMethods]);
+
+  return null;
 };
 
 export default function AiScreen() {
@@ -134,6 +292,22 @@ export default function AiScreen() {
   const [isParsing, setIsParsing] = useState<boolean>(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [parsedResults, setParsedResults] = useState<ParsedTransaction[] | null>(null);
+
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+
+  const latestTranscriptRef = useRef<string>('');
+  const speechMethodsRef = useRef<{ start: () => void; stop: () => void } | null>(null);
+
+  const triggerStartSpeech = () => {
+    setInputText('');
+    latestTranscriptRef.current = '';
+    setIsRecording(true);
+    speechMethodsRef.current?.start();
+  };
+
+  const triggerStopSpeech = () => {
+    speechMethodsRef.current?.stop();
+  };
 
   const systemColorScheme = useColorScheme();
   const { themeMode } = settings;
@@ -166,7 +340,14 @@ export default function AiScreen() {
       setParsedResults(null);
       setIsRecording(false);
       setIsParsing(false);
-    }, [loadCategories])
+
+      if (mode === 'voice') {
+        const timer = setTimeout(() => {
+          triggerStartSpeech();
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+    }, [loadCategories, mode])
   );
 
   const handleParse = async (textToParse = inputText) => {
@@ -348,6 +529,49 @@ export default function AiScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      {/* Speech Controller for background STT events */}
+      {isSpeechAvailable ? (
+        <NativeSpeechController
+          isRecording={isRecording}
+          setIsRecording={setIsRecording}
+          language={language}
+          onResult={(text) => {
+            setInputText(text);
+            latestTranscriptRef.current = text;
+          }}
+          onEnd={() => {
+            const finalVal = latestTranscriptRef.current.trim();
+            if (finalVal) {
+              handleParse(finalVal);
+            }
+          }}
+          registerMethods={(methods) => {
+            speechMethodsRef.current = methods;
+          }}
+          t={t}
+        />
+      ) : (
+        <WebAndSimulatedSpeechController
+          isRecording={isRecording}
+          setIsRecording={setIsRecording}
+          language={language}
+          onResult={(text) => {
+            setInputText(text);
+            latestTranscriptRef.current = text;
+          }}
+          onEnd={() => {
+            const finalVal = latestTranscriptRef.current.trim();
+            if (finalVal) {
+              handleParse(finalVal);
+            }
+          }}
+          registerMethods={(methods) => {
+            speechMethodsRef.current = methods;
+          }}
+          t={t}
+        />
+      )}
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -381,6 +605,31 @@ export default function AiScreen() {
               </TouchableOpacity>
             )}
           </View>
+
+          {/* Voice Input Toggle Button (Directly below input box) */}
+          {!parsedResults && !isParsing && (
+            <View style={styles.voiceToggleSection}>
+              <View style={[styles.voiceOuterRing, { borderColor: isRecording ? `${colors.expense}30` : `${colors.primary}20` }]}>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={[
+                    styles.voiceToggleBtn,
+                    { backgroundColor: isRecording ? colors.expense : colors.primary },
+                  ]}
+                  onPress={isRecording ? triggerStopSpeech : triggerStartSpeech}
+                >
+                  <Ionicons
+                    name={isRecording ? 'mic' : 'mic-outline'}
+                    size={32}
+                    color="#FFF"
+                  />
+                </TouchableOpacity>
+              </View>
+              <Text style={[styles.voiceToggleLabel, { color: isRecording ? colors.expense : colors.textSecondary }]}>
+                {isRecording ? t('ai.voice_recording') : t('ai.voice_btn')}
+              </Text>
+            </View>
+          )}
 
           {/* AI Warning if API Key is empty */}
           {!aiApiKey && (
@@ -416,21 +665,6 @@ export default function AiScreen() {
                 ))}
               </View>
             </View>
-          )}
-
-          {/* Hold to speak section */}
-          {!parsedResults && !isParsing && isSpeechAvailable && (
-            <VoiceInputButton
-              onResult={(text) => {
-                setInputText(text);
-                if (text.trim()) handleParse(text);
-              }}
-              isRecording={isRecording}
-              setIsRecording={setIsRecording}
-              language={language}
-              colors={colors}
-              t={t}
-            />
           )}
 
           {/* AI Parsing Results Card */}
@@ -769,22 +1003,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  voiceSection: {
+  voiceToggleSection: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: Spacing.six,
+    marginVertical: Spacing.four,
   },
-  voiceButton: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
+  voiceOuterRing: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 4,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.two,
   },
-  voiceLabel: {
+  voiceToggleBtn: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  voiceToggleLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
+    textAlign: 'center',
   },
   warningBanner: {
     flexDirection: 'row',

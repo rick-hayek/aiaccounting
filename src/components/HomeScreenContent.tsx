@@ -20,7 +20,6 @@ import { getTransactions, getSumByPeriod, Transaction } from '@/database/db';
 import { MonthlySummaryCard } from '@/components/MonthlySummaryCard';
 import { QuickEntryGrid } from '@/components/QuickEntryGrid';
 import { TransactionItem } from '@/components/TransactionItem';
-import { ManualAddModal } from '@/components/ManualAddModal';
 import { BorderRadius, Spacing } from '@/constants/theme';
 import { getCurrencySymbol } from '@/utils/currency';
 
@@ -42,9 +41,7 @@ export default function HomeScreenContent({ isActive, onNavigateToLedger }: Home
   const [monthIncome, setMonthIncome] = useState(0);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
 
-  // Manual modal states
-  const [manualModalVisible, setManualModalVisible] = useState(false);
-  const [editTxId, setEditTxId] = useState<number | null>(null);
+
 
   const loadHomeData = useCallback(async () => {
     try {
@@ -88,16 +85,15 @@ export default function HomeScreenContent({ isActive, onNavigateToLedger }: Home
   };
 
   const handleVoicePress = () => {
-    router.navigate('/ai' as any);
+    router.navigate({ pathname: '/ai', params: { mode: 'voice' } } as any);
   };
 
   const handleAiPress = () => {
-    router.navigate('/ai' as any);
+    router.navigate({ pathname: '/ai', params: { mode: 'ai' } } as any);
   };
 
   const handleManualPress = () => {
-    setEditTxId(null);
-    setManualModalVisible(true);
+    router.navigate('/add' as any);
   };
 
   const handleScanPress = () => {
@@ -182,21 +178,6 @@ export default function HomeScreenContent({ isActive, onNavigateToLedger }: Home
         </View>
       </ScrollView>
 
-      {/* Manual Add / Edit Modal */}
-      <ManualAddModal
-        visible={manualModalVisible}
-        onClose={() => {
-          setManualModalVisible(false);
-          setEditTxId(null);
-        }}
-        onSave={() => {
-          setManualModalVisible(false);
-          setEditTxId(null);
-          loadHomeData();
-        }}
-        defaultCurrency={defaultCurrency || 'CNY'}
-        editTransactionId={editTxId}
-      />
     </SafeAreaView>
   );
 }

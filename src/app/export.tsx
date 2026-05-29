@@ -19,7 +19,7 @@ import { router } from 'expo-router';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { getTransactions, Transaction } from '@/database/db';
 import { BorderRadius, Spacing } from '@/constants/theme';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
 type ExportFormat = 'csv' | 'json';
